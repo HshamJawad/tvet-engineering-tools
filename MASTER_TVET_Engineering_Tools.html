@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TVET Engineering Tools - Master Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1400px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 30px;
+            padding: 60px 40px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .header-section {
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+            padding: 0 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            border: 3px solid transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .tool-icon {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: white;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            transition: all 0.4s ease;
+        }
+
+        .tool-card:hover .tool-icon {
+            transform: scale(1.08) rotate(3deg);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.6);
+        }
+
+        .tool-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .tool-description {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .tool-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .tool-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .tool-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+        }
+
+        .tool-view.active {
+            display: block;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            overflow: auto;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .copyright {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .version {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+
+            .tool-icon {
+                width: 120px;
+                height: 120px;
+                font-size: 3.5rem;
+            }
+
+            .tool-title {
+                font-size: 1.3rem;
+            }
+
+            .tool-description {
+                font-size: 0.9rem;
+            }
+
+            .main-container {
+                padding: 30px 20px;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Landing Page -->
+    <div class="main-container" id="mainPage">
+        <div class="header-section">
+            <h1>TVET Engineering Tools</h1>
+            <p class="subtitle">🎯 Master Interface - Professional Tools for Training & Education Management</p>
+        </div>
+
+        <div class="tools-grid">
+            <!-- Workshop Agenda Manager Card -->
+            <div class="tool-card" onclick="openTool('workshop')">
+                <div class="tool-icon">📋</div>
+                <h2 class="tool-title">Workshop Agenda Manager</h2>
+                <p class="tool-description">Create, organize, and export professional workshop agendas with detailed schedules, activities, and participant notes.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- Training Cost Calculator Card -->
+            <div class="tool-card" onclick="openTool('calculator')">
+                <div class="tool-icon">💰</div>
+                <h2 class="tool-title">Training Cost Calculator</h2>
+                <p class="tool-description">Calculate comprehensive training costs including venue, materials, trainer fees, and participant allowances with multi-currency support.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- National Qualification Framework Card -->
+            <div class="tool-card" onclick="openTool('nqf')">
+                <div class="tool-icon">🌍</div>
+                <h2 class="tool-title">National Qualification Framework</h2>
+                <p class="tool-description">Interactive world map to explore and search National Qualification Frameworks and equivalent sources across countries.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- LinkedIn Post Editor Card -->
+            <div class="tool-card" onclick="openTool('linkedin')">
+                <div class="tool-icon">💼</div>
+                <h2 class="tool-title">LinkedIn Post Editor</h2>
+                <p class="tool-description">Create and format engaging LinkedIn posts with Unicode text styles, emojis, and professional formatting tools.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- DACUM Chart Generator Card -->
+            <div class="tool-card" onclick="openTool('dacum')">
+                <div class="tool-icon">📊</div>
+                <h2 class="tool-title">DACUM Chart Generator</h2>
+                <p class="tool-description">Develop comprehensive curriculum charts for any occupation with duties, tasks, and related competencies.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p class="copyright">&copy; 2025 Husham Jawad. All rights reserved.</p>
+            <p class="version">TVET Engineering Tools - Master Interface v3.0</p>
+        </div>
+    </div>
+
+    <!-- Workshop Agenda Manager View -->
+    <div class="tool-view" id="workshopView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="workshopLoading">
+            <div class="spinner"></div>
+            <p>Loading Workshop Agenda Manager...</p>
+        </div>
+        <iframe id="workshopFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- Training Cost Calculator View -->
+    <div class="tool-view" id="calculatorView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="calculatorLoading">
+            <div class="spinner"></div>
+            <p>Loading Training Cost Calculator...</p>
+        </div>
+        <iframe id="calculatorFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- National Qualification Framework View -->
+    <div class="tool-view" id="nqfView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="nqfLoading">
+            <div class="spinner"></div>
+            <p>Loading National Qualification Framework Map...</p>
+        </div>
+        <iframe id="nqfFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- LinkedIn Post Editor View -->
+    <div class="tool-view" id="linkedinView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="linkedinLoading">
+            <div class="spinner"></div>
+            <p>Loading LinkedIn Post Editor...</p>
+        </div>
+        <iframe id="linkedinFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- DACUM Chart Generator View -->
+    <div class="tool-view" id="dacumView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="dacumLoading">
+            <div class="spinner"></div>
+            <p>Loading DACUM Chart Generator...</p>
+        </div>
+        <iframe id="dacumFrame" class="iframe-container"></iframe>
+    </div>
+
+    <script>
+        // Store the file paths
+        const tools = {
+            workshop: 'Workshop_Agenda_Manager_English_FINAL__2_.html',
+            calculator: 'Training_Cost_Calculator_Final.html',
+            nqf: 'NQF_world_map_V3.html',
+            linkedin: 'linkedin-editor_V_0_2.html',
+            dacum: 'DACUM_Chart_Generator_V_2_0.html'
+        };
+
+        let currentTool = null;
+
+        function openTool(toolName) {
+            currentTool = toolName;
+            
+            // Hide main page
+            document.getElementById('mainPage').style.display = 'none';
+            
+            // Show the selected tool view
+            const viewId = toolName + 'View';
+            const frameId = toolName + 'Frame';
+            const loadingId = toolName + 'Loading';
+            
+            const toolView = document.getElementById(viewId);
+            const iframe = document.getElementById(frameId);
+            const loading = document.getElementById(loadingId);
+            
+            // Show loading
+            loading.classList.add('active');
+            toolView.classList.add('active');
+            
+            // Load the iframe
+            if (!iframe.src) {
+                iframe.src = tools[toolName];
+                
+                // Hide loading when iframe loads
+                iframe.onload = function() {
+                    loading.classList.remove('active');
+                };
+            } else {
+                loading.classList.remove('active');
+            }
+        }
+
+        function backToMain() {
+            // Hide all tool views
+            document.getElementById('workshopView').classList.remove('active');
+            document.getElementById('calculatorView').classList.remove('active');
+            document.getElementById('nqfView').classList.remove('active');
+            document.getElementById('linkedinView').classList.remove('active');
+            document.getElementById('dacumView').classList.remove('active');
+            
+            // Show main page
+            document.getElementById('mainPage').style.display = 'block';
+            
+            currentTool = null;
+        }
+
+        // Keyboard shortcut - ESC to go back
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && currentTool) {
+                backToMain();
+            }
+        });
+
+        // Prevent accidental navigation away
+        window.addEventListener('beforeunload', function(e) {
+            if (currentTool) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>

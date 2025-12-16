@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Qualification Frameworks - World Map</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .map-container {
+            padding: 40px;
+            background: #f8f9fa;
+            position: relative;
+        }
+
+        .info-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-panel h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        #mapWrapper {
+            width: 100%;
+            height: 600px;
+            position: relative;
+            background: #e8f4f8;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        #worldMap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .country {
+            fill: #cbd5e0;
+            stroke: #ffffff;
+            stroke-width: 0.5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .country.has-nqf {
+            fill: #5a8ba8;
+        }
+
+        .country:hover {
+            fill: #e74c3c !important;
+            stroke: #c0392b;
+            stroke-width: 1.5;
+            filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.8));
+        }
+
+        .highlight-marker {
+            position: absolute;
+            pointer-events: none;
+            font-size: 2em;
+            z-index: 9999;
+        }
+
+        .marker-circle {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #e74c3c;
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none;
+            z-index: 9998;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(231, 76, 60, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+            }
+        }
+
+        .marker-arrow {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #e74c3c;
+            position: absolute;
+            pointer-events: none;
+            z-index: 9998;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        .tooltip {
+            position: fixed;
+            background: white;
+            border: 3px solid #2c3e50;
+            border-radius: 12px;
+            padding: 16px 20px;
+            pointer-events: none;
+            display: none;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            z-index: 10000;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .tooltip.show {
+            display: block;
+        }
+
+        .tooltip-flag {
+            font-size: 3em;
+            margin-bottom: 10px;
+            display: block;
+            line-height: 1;
+        }
+
+        .tooltip-country {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+
+        .tooltip-info {
+            color: #666;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border: 1px solid #2c3e50;
+            border-radius: 3px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-label {
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 120px;
+        }
+
+        #zoomSlider {
+            width: 150px;
+            cursor: pointer;
+        }
+
+        #mapWrapper {
+            cursor: grab;
+            position: relative;
+        }
+
+        #mapWrapper:active {
+            cursor: grabbing;
+        }
+
+        #markerContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 National Qualification Frameworks</h1>
+            <p class="subtitle">Interactive World Map - Hover, Click to visit official NQF websites</p>
+        </header>
+
+        <div class="map-container">
+            <div class="info-panel">
+                <h2>About National Qualification Frameworks</h2>
+                <p>National Qualifications Frameworks (NQFs) are instruments for the development and classification of qualifications according to a set of criteria for levels of learning achieved. Hover over any country and click to explore their official NQF information.</p>
+                <p style="margin-top: 15px; font-weight: bold; color: #2c3e50; font-size: 1.1em;">
+                    📊 <span id="countryCount">0</span> Countries Available
+                </p>
+            </div>
+
+            <div class="controls">
+                <div class="zoom-control">
+                    <span class="zoom-label">Zoom Level:</span>
+                    <input type="range" id="zoomSlider" min="50" max="1000" value="220" step="10">
+                    <span id="zoomValue" style="min-width: 40px; font-weight: bold; color: #2c3e50;">220</span>
+                </div>
+                <div style="border-left: 2px solid #ccc; height: 30px;"></div>
+                <div class="zoom-control" style="gap: 8px;">
+                    <label for="countryDropdown" style="font-weight: bold; color: #2c3e50;">Select Country:</label>
+                    <select id="countryDropdown" style="padding: 8px 12px; border-radius: 5px; border: 2px solid #2c3e50; font-size: 0.95em; cursor: pointer;">
+                        <option value="">-- Choose a Country --</option>
+                    </select>
+                    <button id="visitNQFBtn" style="padding: 8px 16px; background: #5a8ba8; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: none; transition: background 0.3s;">
+                        Visit NQF Website
+                    </button>
+                </div>
+            </div>
+
+            <div id="mapWrapper">
+                <div id="markerContainer"></div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #5a8ba8;"></div>
+                    <span>Country with NQF</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #cbd5e0;"></div>
+                    <span>No NQF data</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Hover state</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 National Qualification Frameworks World Map | By Husham Jawad | Click countries to visit official NQF websites</p>
+        </footer>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-country" id="tooltipCountry"></div>
+        <div class="tooltip-info" id="tooltipInfo">Click to visit NQF website</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+    <script>
+        // Country name mappings for atlas vs our data
+        const countryNameMap = {
+            'China': 'China',
+            'Hong Kong S.A.R.': 'Hong Kong',
+            'Macao S.A.R': 'Macao',
+            'N. Cyprus': 'Cyprus',
+            'Republic of Singapore': 'Singapore',
+            'Rep. of Singapore': 'Singapore'
+        };
+
+        // NQF data for countries - UPDATED with all countries
+        const nqfData = {
+            'United States of America': { url: 'https://www.nqfconnect.org/' },
+            'Canada': { url: 'https://www.cicic.ca/1374/qualifications_frameworks.canada' },
+            'Mexico': { url: 'https://uil.unesco.org/fileadmin/keydocuments/LifelongLearning/en/Mexico.pdf' },
+            'Brazil': { url: 'http://portal.mec.gov.br/' },
+            'Argentina': { url: 'https://www.argentina.gob.ar/educacion' },
+            'United Kingdom': { url: 'https://www.gov.uk/what-different-qualification-levels-mean' },
+            'France': { url: 'https://www.service-public.gouv.fr/particuliers/vosdroits/F199' },
+            'Germany': { url: 'https://www.dqr.de/dqr/en/the-dqr/deutscher-qualifikationsrahmen-the-dqr.html' },
+            'Spain': { url: 'https://eurydice.eacea.ec.europa.eu/eurypedia/spain/national-qualifications-framework' },
+            'Italy': { url: 'https://www.miur.gov.it/' },
+            'Netherlands': { url: 'https://nlqf.nl/english-information/' },
+            'Ireland': { url: 'https://www.qqi.ie/' },
+            'Turkey': { url: 'https://www.myk.gov.tr/' },
+            'South Africa': { url: 'https://www.saqa.org.za/' },
+            'Egypt': { url: 'http://naqaae.eg/' },
+            'Nigeria': { url: 'https://web.nbte.gov.ng/' },
+            'China': { url: 'http://en.moe.gov.cn/' },
+            'India': { url: 'https://www.nqr.gov.in/' },
+            'Japan': { url: 'https://www.mext.go.jp/' },
+            'South Korea': { url: 'https://www.nqf.or.kr/' },
+            'Australia': { url: 'https://www.aqf.edu.au/' },
+            'New Zealand': { url: 'https://www2.nzqa.govt.nz/qualifications-and-standards/about-new-zealand-qualifications-credentials-framework/' },
+            'Saudi Arabia': { url: 'https://www.tu.edu.sa/En/Deanship-of-Graduate-Studies-and-Scientific-Research/110/Pages/22935/National-Qualifications-Framework-(2nd-edition)' },
+            'Thailand': { url: 'https://backoffice.onec.go.th/uploads/Book/1552-file.pdf' },
+            'Malaysia': { url: 'https://www.mqa.gov.my/' },
+            'Indonesia': { url: 'https://kkni.kemdikbud.go.id/' },
+            'Iraq': { url: 'https://molsa.gov.iq/upload/2208689238.docx' },
+            'Poland': { url: 'https://prk.men.gov.pl/en/1en/' },
+            'Ukraine': { url: 'https://nqa.gov.ua/en/national-qualification-frame/' },
+            'Kenya': { url: 'https://www.knqa.go.ke/' },
+            'Ghana': { url: 'https://www.nab.gov.gh/' },
+            'Pakistan': { url: 'https://www.hec.gov.pk/english/services/universities/pqf/Pages/default.aspx' },
+            'Portugal': { url: 'https://www.dges.gov.pt/en/quadro_qualificacoes' },
+            'Qatar': { url: 'https://www.edu.gov.qa/en/Content/NationalQualifications' },
+            'Angola': { url: 'https://www.inq.gov.ao/' },
+            'Bahrain': { url: 'https://bqa.gov.bh/' },
+            'Nepal': { url: 'https://nvqs.org.np/page/nvqf-in-english' },
+            'Serbia': { url: 'http://noks.mpn.gov.rs/en/about-nqfs/' },
+            'Oman': { url: 'https://www.squ.edu.om/qao/DEPARTMENTS/Academic-Programs-and-Community-Service/Oman-Qualification-Framework-OQF' },
+            'Austria': { url: 'https://www.qualifikationsregister.at/en/' },
+            'Azerbaijan': { url: 'https://e-qanun.az/framework/39622' },
+            'Belgium': { url: 'https://vlaamsekwalificatiestructuur.be/en/' },
+            'Bhutan': { url: 'http://www.dahe.gov.bt/images/pdf/Bhutan%20Qualifications%20Framework%20Inside%20Content.pdf' },
+            'Botswana': { url: 'https://www.bqa.org.bw/registered-qualifications' },
+            'Bulgaria': { url: 'https://www.mon.bg/' },
+            'Croatia': { url: 'https://www.kvalifikacije.hr/sites/default/files/documents-publications/2017-09/The%20CROQF%20Act.pdf' },
+            'Cyprus': { url: 'https://www.cyqf.gov.cy/index.php/en/diagram' },
+            'Denmark': { url: 'https://ufm.dk/en/education/recognition-and-transparency/transparency-tools/qualifications-frameworks' },
+            'Estonia': { url: 'https://kutsekoda.ee/en/' },
+            'Fiji': { url: 'https://hec.org.fj/framework/' },
+            'Finland': { url: 'https://www.oph.fi/sv/utbildning-och-examina/referensramar-kvalifikationer' },
+            'Greece': { url: 'https://www.eoppep.gr/index.php/en/qualifications-certification-en' },
+            'Guyana': { url: 'https://caricom.org/wp-content/uploads/Final-CQF-for-Member-States.pdf' },
+            'Hong Kong': { url: 'https://www.hkqf.gov.hk/en/home' },
+            'Hungary': { url: 'https://eurydice.eacea.ec.europa.eu/eurypedia/hungary/national-qualifications-framework' },
+            'Iceland': { url: 'https://english.enicnaric.is/isqf.html' },
+            'Jamaica': { url: 'https://jtec.gov.jm/the-national-qualifications-framework/' },
+            'Jordan': { url: 'https://jnqf.heac.org.jo/' },
+            'Kazakhstan': { url: 'https://www.etf.europa.eu/sites/default/files/2021-05/kazakhstan.pdf' },
+            'Kosovo': { url: 'https://www.etf.europa.eu/sites/default/files/2023-05/Kosovo%202023.pdf' },
+            'Kyrgyzstan': { url: 'https://www.etf.europa.eu/sites/default/files/2021-07/kyrgyzstan_0.pdf' },
+            'Latvia': { url: 'https://www.latvijaskvalifikacijas.lv/' },
+            'Lebanon': { url: 'https://www.etf.europa.eu/sites/default/files/2021-07/lebanon.pdf' },
+            'Lesotho': { url: 'https://www.che.ac.ls/wp-content/uploads/2020/02/LQF-Final_Cabinet-Approved-Signed-1.pdf' },
+            'Liechtenstein': { url: 'https://www.nqfl.li/' },
+            'Lithuania': { url: 'https://www.skvc.lt/default/en/education-in-lithuania/national-qualifications-framework' },
+            'Luxembourg': { url: 'https://www.lifelong-learning.lu/formation-tout-au-long-de-la-vie/clq-cadre-luxembourgeois-des-qualifications/en' },
+            'Malta': { url: 'https://mfhea.mt/research-and-policy/malta-qualifications-framework/' },
+            'Macedonia': { url: 'https://www.etf.europa.eu/sites/default/files/2023-06/North%20Macedonia%202023.pdf' },
+            'Malawi': { url: 'https://www.nche.ac.mw/resources/frameworks' },
+            'Mauritius': { url: 'https://mqa.govmu.org/mqa/' },
+            'Montenegro': { url: 'https://europass.europa.eu/system/files/2020-06/Montenegrin%20Referencing%20Report.pdf' },
+            'Moldova': { url: 'https://mecc.gov.md/ro/content/cadrul-de-calificari' },
+            'Morocco': { url: 'https://www.etf.europa.eu/sites/default/files/document/NQF_Morocco.pdf' },
+            'Mozambique': { url: 'https://www.etf.europa.eu/sites/default/files/2022-01/mozambique.pdf' },
+            'Namibia': { url: 'https://namqa.org/framework-overview/' },
+            'Norway': { url: 'https://www.nokut.no/en/norwegian-education/the-norwegian-qualifications-framework-for-lifelong-learning/' },
+            'Papua New Guinea': { url: 'https://web.dherst.gov.pg/quality-assurance/national-qualification-framework' },
+            'Philippines': { url: 'https://pqf.gov.ph/' },
+            'Romania': { url: 'https://cnred.edu.ro/en/education-system-in-romania-2/' },
+            'Rwanda': { url: 'https://utab.ac.rw/wp-content/uploads/2021/01/RWANDAN_NATIONAL_QUALIFICATIONS_FRAMEWORK_FOR_HIGHER_EDUCATION_2.pdf' },
+            'Saint Kitts and Nevis': { url: 'https://www.thestkittsnevisobserver.com/the-skn-national-qualification-framework-launched/' },
+            'Seychelles': { url: 'http://www.sqa.sc/images/Seychelles%20National%20Qualifications%20Framework_Final_Digital.pdf' },
+            'Slovakia': { url: 'https://www.kvalifikacie.sk/' },
+            'Slovenia': { url: 'https://www.nok.si/en/' },
+            'Solomon Islands': { url: 'https://www.sinu.edu.sb/wp-content/uploads/2022/11/Sinu-QF-2.pdf' },
+            'Samoa': { url: 'https://prqs.spc.int/Default.aspx#' },
+            'Switzerland': { url: 'https://www.sbfi.admin.ch/en/national-qualifications-framework-for-vocational-and-professional-qualifications-nqf-vpq' },
+            'Sri Lanka': { url: 'https://www.ugc.ac.lk/attachments/1156_SLQF_2016_en.pdf' },
+            'Sweden': { url: 'https://www.uhr.se/en/start/recognition-of-foreign-qualifications/enic-naric-sweden/qualification-frameworks-for-swedish-qualifications-and-degrees/' },
+            'Tanzania': { url: 'https://uil.unesco.org/fileadmin/keydocuments/LifelongLearning/en/Tanzania.pdf' },
+            'Timor-Leste': { url: 'https://sea-vet.net/timor-leste' },
+            'Tonga': { url: 'https://www.tnqab.com/services/qualifications-framework' },
+            'Tunisia': { url: 'https://www.etf.europa.eu/sites/default/files/2023-05/Tunisia%202023_EN.pdf' },
+            'Uzbekistan': { url: 'https://ec.europa.eu/programmes/erasmus-plus/project-result-content/1defadc8-d204-43cc-87f2-1d14defa8125/Guidelines_NQF_final_en.pdf' },
+            'Zambia': { url: 'https://www.zaqa.gov.zm/wp-content/uploads/2020/07/ZQF-2018.pdf' },
+            'Zimbabwe': { url: 'https://www.zimche.ac.zw/wp-content/uploads/2019/04/ZNQF.pdf' },
+            'Chile': { url: 'https://chilevalora.gob.cl/' },
+            'Trinidad and Tobago': { url: 'https://ntatnt.org/nqf/' },
+            'Singapore': { url: 'https://www.ssg.gov.sg/skills-development/workforce-skills-qualifications/' }
+        };
+
+        const tooltip = document.getElementById('tooltip');
+        const tooltipCountry = document.getElementById('tooltipCountry');
+        const tooltipInfo = document.getElementById('tooltipInfo');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValue = document.getElementById('zoomValue');
+        const countryCount = document.getElementById('countryCount');
+        const countryDropdown = document.getElementById('countryDropdown');
+        const visitNQFBtn = document.getElementById('visitNQFBtn');
+
+        // Count and display the number of countries
+        const totalCountries = Object.keys(nqfData).length;
+        countryCount.textContent = totalCountries;
+
+        // Populate dropdown with sorted country names
+        const sortedCountries = Object.keys(nqfData).sort();
+        sortedCountries.forEach(country => {
+            const option = document.createElement('option');
+            option.value = country;
+            option.textContent = country;
+            countryDropdown.appendChild(option);
+        });
+
+        // Set up SVG
+        const width = 1400;
+        const height = 600;
+
+        const svg = d3.select("#mapWrapper")
+            .append("svg")
+            .attr("id", "worldMap")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+
+        const projection = d3.geoNaturalEarth1()
+            .scale(220)
+            .translate([width / 2, height / 2]);
+
+        const path = d3.geoPath().projection(projection);
+
+        // Pan and zoom variables
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+        let currentTranslate = [width / 2, height / 2];
+        const mapGroup = svg.append("g").attr("class", "map-group");
+
+        // Update projection with current translate
+        function updateProjection() {
+            projection.translate(currentTranslate);
+        }
+
+        // Load and display the world map
+        d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
+            const countries = topojson.feature(world, world.objects.countries);
+
+            mapGroup.selectAll("path")
+                .data(countries.features)
+                .enter()
+                .append("path")
+                .attr("class", d => {
+                    const countryName = d.properties.name;
+                    const mappedName = countryNameMap[countryName] || countryName;
+                    return nqfData[mappedName] ? "country has-nqf" : "country";
+                })
+                .attr("d", path)
+                .attr("data-country", d => d.properties.name)
+                .on("mouseenter", function(event, d) {
+                    const countryName = d.properties.name;
+                    const mappedName = countryNameMap[countryName] || countryName;
+                    const nqf = nqfData[mappedName];
+                    
+                    if (nqf) {
+                        tooltipCountry.textContent = mappedName;
+                        tooltipInfo.textContent = "Click to visit NQF website";
+                        tooltip.classList.add('show');
+                    }
+                })
+                .on("mousemove", function(event) {
+                    tooltip.style.left = (event.clientX + 15) + 'px';
+                    tooltip.style.top = (event.clientY + 15) + 'px';
+                })
+                .on("mouseleave", function() {
+                    tooltip.classList.remove('show');
+                    d3.selectAll(".country").style("filter", null);
+                })
+                .on("click", function(event, d) {
+                    const countryName = d.properties.name;
+                    const mappedName = countryNameMap[countryName] || countryName;
+                    const nqf = nqfData[mappedName];
+                    
+                    if (nqf && nqf.url) {
+                        window.open(nqf.url, '_blank');
+                    }
+                });
+
+            // Function to update marker positions
+            function updateMarkerPositions() {
+                const selectedCountry = countryDropdown.value;
+                if (!selectedCountry) return;
+                
+                const markerContainer = document.getElementById('markerContainer');
+                markerContainer.innerHTML = '';
+                
+                let countryElement = null;
+                let countryData = null;
+                d3.selectAll(".country").each(function(d) {
+                    const atlasName = d.properties.name;
+                    const mappedName = countryNameMap[atlasName] || atlasName;
+                    if (mappedName === selectedCountry) {
+                        countryElement = this;
+                        countryData = d;
+                    }
+                });
+                
+                if (countryElement && countryData) {
+                    // Get the current path bounds after zoom/pan
+                    const bounds = path.bounds(countryData);
+                    const centerX = (bounds[0][0] + bounds[1][0]) / 2;
+                    const centerY = (bounds[0][1] + bounds[1][1]) / 2;
+                    
+                    const svg = document.querySelector('#worldMap');
+                    const percentX = (centerX / svg.viewBox.baseVal.width) * 100;
+                    const percentY = (centerY / svg.viewBox.baseVal.height) * 100;
+                    
+                    // Add pulsing circle - always show for selected country
+                    const circle = document.createElement('div');
+                    circle.className = 'marker-circle';
+                    circle.style.left = `calc(${percentX}% - 30px)`;
+                    circle.style.top = `calc(${percentY}% - 30px)`;
+                    markerContainer.appendChild(circle);
+                    
+                    // Add bouncing arrow
+                    const arrow = document.createElement('div');
+                    arrow.className = 'marker-arrow';
+                    arrow.style.left = `calc(${percentX}% - 15px)`;
+                    arrow.style.top = `calc(${percentY}% - 70px)`;
+                    markerContainer.appendChild(arrow);
+                }
+            }
+
+            // Dropdown country selection functionality
+            countryDropdown.addEventListener('change', function() {
+                const selectedCountry = this.value;
+                const markerContainer = document.getElementById('markerContainer');
+                
+                // Remove existing markers
+                markerContainer.innerHTML = '';
+                visitNQFBtn.style.display = 'none';
+                
+                // Reset all countries
+                d3.selectAll(".country").style("filter", null).style("fill", d => {
+                    const atlasName = d.properties.name;
+                    const mappedName = countryNameMap[atlasName] || atlasName;
+                    return nqfData[mappedName] ? "#5a8ba8" : "#cbd5e0";
+                });
+                
+                if (selectedCountry) {
+                    // Highlight the selected country
+                    d3.selectAll(".country").each(function(d) {
+                        const atlasName = d.properties.name;
+                        const mappedName = countryNameMap[atlasName] || atlasName;
+                        if (mappedName === selectedCountry) {
+                            d3.select(this).style("fill", "#e74c3c");
+                            d3.select(this).style("filter", "drop-shadow(0 0 8px rgba(231, 76, 60, 0.8)) drop-shadow(0 0 15px rgba(231, 76, 60, 0.6))");
+                        }
+                    });
+                    
+                    // Update markers
+                    updateMarkerPositions();
+                    
+                    // Show tooltip for selected country
+                    const nqf = nqfData[selectedCountry];
+                    if (nqf) {
+                        tooltipCountry.textContent = selectedCountry;
+                        tooltipInfo.textContent = "Click to visit NQF website";
+                        tooltip.classList.add('show');
+                        
+                        // Show the visit button
+                        visitNQFBtn.style.display = 'inline-block';
+                        visitNQFBtn.onclick = function() {
+                            window.open(nqf.url, '_blank');
+                        };
+                        
+                        // Add hover effect to button
+                        visitNQFBtn.onmouseover = function() {
+                            this.style.background = '#4a7a96';
+                        };
+                        visitNQFBtn.onmouseout = function() {
+                            this.style.background = '#5a8ba8';
+                        };
+                    }
+                }
+            });
+
+            // Pan functionality
+            const mapWrapper = document.getElementById('mapWrapper');
+            mapWrapper.addEventListener('mousedown', (e) => {
+                if (e.button === 0) {
+                    isPanning = true;
+                    panStart = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            mapWrapper.addEventListener('mousemove', (e) => {
+                if (isPanning) {
+                    const dx = e.clientX - panStart.x;
+                    const dy = e.clientY - panStart.y;
+                    
+                    currentTranslate[0] += dx;
+                    currentTranslate[1] += dy;
+                    panStart = { x: e.clientX, y: e.clientY };
+                    
+                    updateProjection();
+                    mapGroup.selectAll("path").attr("d", path);
+                    updateMarkerPositions();
+                }
+            });
+
+            mapWrapper.addEventListener('mouseup', () => {
+                isPanning = false;
+            });
+
+            mapWrapper.addEventListener('mouseleave', () => {
+                isPanning = false;
+            });
+
+            // Zoom slider functionality
+            zoomSlider.addEventListener('input', (e) => {
+                const newScale = parseFloat(e.target.value);
+                projection.scale(newScale);
+                zoomValue.textContent = newScale;
+                mapGroup.selectAll("path").attr("d", path);
+                updateMarkerPositions();
+            });
+        });
+    </script>
+</body>
+</html>

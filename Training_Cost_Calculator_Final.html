@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Cost Calculator</title>
+    <!-- Include jsPDF and xlsx libraries from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .calculator-container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"], input[type="date"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="date"] {
+            cursor: pointer;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .export-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .export-btn {
+            background-color: #2196F3;
+        }
+        .export-btn:hover {
+            background-color: #0b7dda;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border-radius: 4px;
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .language-toggle {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+        .tab-container {
+            margin-top: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 1px;
+        }
+        .tab-button {
+            padding: 12px 20px;
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            top: 1px;
+        }
+        .tab-button:hover {
+            background-color: #f8f8f8;
+        }
+        .tab-button.active {
+            background-color: #4CAF50;
+            color: white;
+            border-bottom: none;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 0 4px 4px 4px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .copyright {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .disclaimer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #888;
+            font-style: italic;
+        }
+        .currency-select {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 4px;
+            border: 1px solid #d1e0ff;
+        }
+        .date-input-container {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .nights-input {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #f0fff0;
+            border-radius: 4px;
+            border: 1px solid #d1e0d1;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="language-toggle">
+        <button id="toggleLanguage">العربية</button>
+    </div>
+
+    <div id="english-content">
+        <h1>Training Cost Calculator</h1>
+        <p>Calculate the total cost of a training workshop based on various factors.</p>
+        
+        <div class="calculator-container">
+            <!-- New Date Selection -->
+            <div class="date-input-container">
+                <div class="form-group">
+                    <label for="calculation-date">Calculation Date:</label>
+                    <input type="date" id="calculation-date">
+                </div>
+            </div>
+            
+            <!-- Currency Selection -->
+            <div class="currency-select">
+                <div class="form-group">
+                    <label for="currency">Select Currency:</label>
+                    <select id="currency">
+                        <option value="USD" selected>US Dollar ($)</option>
+                        <option value="EUR">Euro (€)</option>
+                        <option value="GBP">British Pound (£)</option>
+                        <option value="JPY">Japanese Yen (¥)</option>
+                        <option value="CNY">Chinese Yuan (¥)</option>
+                        <option value="AED">UAE Dirham (د.إ)</option>
+                        <option value="SAR">Saudi Riyal (ر.س)</option>
+                        <option value="CAD">Canadian Dollar (C$)</option>
+                        <option value="AUD">Australian Dollar (A$)</option>
+                        <option value="INR">Indian Rupee (₹)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="trainees">Number of Trainees:</label>
+                <input type="number" id="trainees" min="1" placeholder="Enter number of trainees">
+            </div>
+            
+            <div class="form-group">
+                <label for="duration">Workshop Duration (days):</label>
+                <input type="number" id="duration" min="1" placeholder="Enter duration in days">
+            </div>
+            
+            <div class="form-group">
+                <label for="trainers">Number of Trainers/Facilitators:</label>
+                <input type="number" id="trainers" min="1" value="1" placeholder="Enter number of trainers">
+            </div>
+            
+            <div class="form-group">
+                <label for="cofacilitators">Number of Co-Facilitators:</label>
+                <input type="number" id="cofacilitators" min="0" value="0" placeholder="Enter number of co-facilitators">
+            </div>
+
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="costs">Fixed Costs</button>
+                    <button class="tab-button" data-tab="per-trainee">Per Trainee Costs</button>
+                </div>
+
+                <div id="costs" class="tab-content active">
+                    <div class="form-group">
+                        <label for="venue">Venue Cost (per day):</label>
+                        <input type="number" id="venue" min="0" placeholder="Enter venue cost per day">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="trainer">Trainer/Facilitator Cost:</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="number" id="trainer" min="0" placeholder="Enter trainer cost" style="flex: 1;">
+                            <div style="margin-left: 10px; white-space: nowrap;">
+                                <input type="radio" id="trainer-per-day" name="trainer-period" value="day" checked>
+                                <label for="trainer-per-day" style="display: inline; font-weight: normal;">Per Day</label>
+                                <input type="radio" id="trainer-per-night" name="trainer-period" value="night" style="margin-left: 10px;">
+                                <label for="trainer-per-night" style="display: inline; font-weight: normal;">Per Night</label>
+                            </div>
+                        </div>
+                        <div id="trainer-nights-container" class="nights-input">
+                            <label for="trainer-nights">Number of Nights:</label>
+                            <input type="number" id="trainer-nights" min="0" placeholder="Enter number of nights">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cofacilitator">Co-Facilitator Cost (per day per co-facilitator):</label>
+                        <input type="number" id="cofacilitator" min="0" placeholder="Enter co-facilitator cost per day">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="equipment">Equipment Rental (total):</label>
+                        <input type="number" id="equipment" min="0" placeholder="Enter equipment rental cost">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="printing">Printing Services (total):</label>
+                        <input type="number" id="printing" min="0" placeholder="Enter printing services cost">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="catering">Catering (Coffee, Refreshments per day for all):</label>
+                        <input type="number" id="catering" min="0" placeholder="Enter catering cost per day">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="management">Service Management Fees (total):</label>
+                        <input type="number" id="management" min="0" placeholder="Enter management fees">
+                    </div>
+                </div>
+
+                <div id="per-trainee" class="tab-content">
+                    <div class="form-group">
+                        <label for="materials">Materials Cost (per trainee):</label>
+                        <input type="number" id="materials" min="0" placeholder="Enter materials cost per trainee">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tools">Tools Cost (per trainee):</label>
+                        <input type="number" id="tools" min="0" placeholder="Enter tools cost per trainee">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="consumables">Consumables (per trainee):</label>
+                        <input type="number" id="consumables" min="0" placeholder="Enter consumables cost per trainee">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="allowance">Fixed Allowance (Accommodation, Meals) per trainee/Participant:</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="number" id="allowance" min="0" placeholder="Enter allowance per trainee" style="flex: 1;">
+                            <div style="margin-left: 10px; white-space: nowrap;">
+                                <input type="radio" id="allowance-per-day" name="allowance-period" value="day" checked>
+                                <label for="allowance-per-day" style="display: inline; font-weight: normal;">Per Day</label>
+                                <input type="radio" id="allowance-per-night" name="allowance-period" value="night" style="margin-left: 10px;">
+                                <label for="allowance-per-night" style="display: inline; font-weight: normal;">Per Night</label>
+                            </div>
+                        </div>
+                        <div id="allowance-nights-container" class="nights-input">
+                            <label for="allowance-nights">Number of Nights:</label>
+                            <input type="number" id="allowance-nights" min="0" placeholder="Enter number of nights">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="transport">Transport Allowance (per trainee per day):</label>
+                        <input type="number" id="transport" min="0" placeholder="Enter transport allowance per trainee per day">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="certification">Certification Fee (per trainee):</label>
+                        <input type="number" id="certification" min="0" placeholder="Enter certification fee per trainee">
+                    </div>
+                </div>
+            </div>
+            
+            <button id="calculate">Calculate Total Cost</button>
+            
+            <div class="results" id="results">
+                <h2>Cost Breakdown</h2>
+                <table id="cost-table">
+                    <tr>
+                        <th>Item</th>
+                        <th>Cost</th>
+                    </tr>
+                </table>
+                <h3>Summary</h3>
+                <p><strong>Total Cost:</strong> <span id="total-cost-currency">$</span><span id="total-cost">0</span></p>
+                <p><strong>Cost Per Trainee:</strong> <span id="cost-per-trainee-currency">$</span><span id="cost-per-trainee">0</span></p>
+                
+                <div class="export-buttons">
+                    <button id="export-pdf" class="export-btn">Save as PDF</button>
+                    <button id="export-excel" class="export-btn">Save as Excel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Arabic Content -->
+    <div id="arabic-content" style="display: none; direction: rtl; text-align: right;">
+        <h1>حاسبة تكلفة التدريب</h1>
+        <p>احسب التكلفة الإجمالية لورشة التدريب بناءً على عوامل مختلفة.</p>
+        
+        <div class="calculator-container">
+            <!-- New Date Selection (Arabic) -->
+            <div class="date-input-container">
+                <div class="form-group">
+                    <label for="calculation-date-ar">تاريخ الحساب:</label>
+                    <input type="date" id="calculation-date-ar">
+                </div>
+            </div>
+            
+            <!-- Currency Selection -->
+            <div class="currency-select">
+                <div class="form-group">
+                    <label for="currency-ar">اختر العملة:</label>
+                    <select id="currency-ar">
+                        <option value="USD" selected>دولار أمريكي ($)</option>
+                        <option value="EUR">يورو (€)</option>
+                        <option value="GBP">جنيه إسترليني (£)</option>
+                        <option value="JPY">ين ياباني (¥)</option>
+                        <option value="CNY">يوان صيني (¥)</option>
+                        <option value="AED">درهم إماراتي (د.إ)</option>
+                        <option value="SAR">ريال سعودي (ر.س)</option>
+                        <option value="CAD">دولار كندي (C$)</option>
+                        <option value="AUD">دولار أسترالي (A$)</option>
+                        <option value="INR">روبية هندية (₹)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="trainees-ar">عدد المتدربين:</label>
+                <input type="number" id="trainees-ar" min="1" placeholder="أدخل عدد المتدربين">
+            </div>
+            
+            <div class="form-group">
+                <label for="duration-ar">مدة الورشة (بالأيام):</label>
+                <input type="number" id="duration-ar" min="1" placeholder="أدخل مدة الورشة بالأيام">
+            </div>
+            
+            <div class="form-group">
+                <label for="trainers-ar">عدد المدربين/الميسرين:</label>
+                <input type="number" id="trainers-ar" min="1" value="1" placeholder="أدخل عدد المدربين">
+            </div>
+            
+            <div class="form-group">
+                <label for="cofacilitators-ar">عدد المساعدين:</label>
+                <input type="number" id="cofacilitators-ar" min="0" value="0" placeholder="أدخل عدد المساعدين">
+            </div>
+
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="costs-ar">التكاليف الثابتة</button>
+                    <button class="tab-button" data-tab="per-trainee-ar">تكاليف لكل متدرب</button>
+                </div>
+
+                <div id="costs-ar" class="tab-content active">
+                    <div class="form-group">
+                        <label for="venue-ar">تكلفة المكان (لليوم الواحد):</label>
+                        <input type="number" id="venue-ar" min="0" placeholder="أدخل تكلفة المكان لليوم الواحد">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="trainer-ar">تكلفة المدرب/الميسر:</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="number" id="trainer-ar" min="0" placeholder="أدخل تكلفة المدرب" style="flex: 1;">
+                            <div style="margin-right: 10px; white-space: nowrap;">
+                                <input type="radio" id="trainer-per-day-ar" name="trainer-period-ar" value="day" checked>
+                                <label for="trainer-per-day-ar" style="display: inline; font-weight: normal;">لليوم</label>
+                                <input type="radio" id="trainer-per-night-ar" name="trainer-period-ar" value="night" style="margin-right: 10px;">
+                                <label for="trainer-per-night-ar" style="display: inline; font-weight: normal;">لليلة</label>
+                            </div>
+                        </div>
+                        <div id="trainer-nights-container-ar" class="nights-input">
+                            <label for="trainer-nights-ar">عدد الليالي:</label>
+                            <input type="number" id="trainer-nights-ar" min="0" placeholder="أدخل عدد الليالي">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cofacilitator-ar">تكلفة المساعد (لليوم الواحد لكل مساعد):</label>
+                        <input type="number" id="cofacilitator-ar" min="0" placeholder="أدخل تكلفة المساعد لليوم الواحد">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="equipment-ar">إيجار المعدات (المجموع):</label>
+                        <input type="number" id="equipment-ar" min="0" placeholder="أدخل تكلفة إيجار المعدات">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="printing-ar">خدمات الطباعة (المجموع):</label>
+                        <input type="number" id="printing-ar" min="0" placeholder="أدخل تكلفة خدمات الطباعة">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="catering-ar">الضيافة (القهوة والمرطبات في اليوم للجميع):</label>
+                        <input type="number" id="catering-ar" min="0" placeholder="أدخل تكلفة الضيافة لليوم الواحد">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="management-ar">رسوم إدارة الخدمة (المجموع):</label>
+                        <input type="number" id="management-ar" min="0" placeholder="أدخل رسوم الإدارة">
+                    </div>
+                </div>
+
+                <div id="per-trainee-ar" class="tab-content">
+                    <div class="form-group">
+                        <label for="materials-ar">تكلفة المواد (لكل متدرب):</label>
+                        <input type="number" id="materials-ar" min="0" placeholder="أدخل تكلفة المواد لكل متدرب">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tools-ar">تكلفة الأدوات (لكل متدرب):</label>
+                        <input type="number" id="tools-ar" min="0" placeholder="أدخل تكلفة الأدوات لكل متدرب">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="consumables-ar">المواد الاستهلاكية (لكل متدرب):</label>
+                        <input type="number" id="consumables-ar" min="0" placeholder="أدخل تكلفة المواد الاستهلاكية لكل متدرب">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="allowance-ar">البدل الثابت (السكن والوجبات) لكل متدرب/مشارك:</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="number" id="allowance-ar" min="0" placeholder="أدخل البدل الثابت لكل متدرب" style="flex: 1;">
+                            <div style="margin-right: 10px; white-space: nowrap;">
+                                <input type="radio" id="allowance-per-day-ar" name="allowance-period-ar" value="day" checked>
+                                <label for="allowance-per-day-ar" style="display: inline; font-weight: normal;">لليوم</label>
+                                <input type="radio" id="allowance-per-night-ar" name="allowance-period-ar" value="night" style="margin-right: 10px;">
+                                <label for="allowance-per-night-ar" style="display: inline; font-weight: normal;">لليلة</label>
+                            </div>
+                        </div>
+                        <div id="allowance-nights-container-ar" class="nights-input">
+                            <label for="allowance-nights-ar">عدد الليالي:</label>
+                            <input type="number" id="allowance-nights-ar" min="0" placeholder="أدخل عدد الليالي">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="transport-ar">بدل النقل (لكل متدرب لليوم الواحد):</label>
+                        <input type="number" id="transport-ar" min="0" placeholder="أدخل بدل النقل لكل متدرب لليوم الواحد">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="certification-ar">رسوم الشهادة (لكل متدرب):</label>
+                        <input type="number" id="certification-ar" min="0" placeholder="أدخل رسوم الشهادة لكل متدرب">
+                    </div>
+                </div>
+            </div>
+            
+            <button id="calculate-ar">حساب التكلفة الإجمالية</button>
+            
+            <div class="results" id="results-ar">
+                <h2>تفصيل التكاليف</h2>
+                <table id="cost-table-ar">
+                    <tr>
+                        <th>البند</th>
+                        <th>التكلفة</th>
+                    </tr>
+                </table>
+                <h3>الملخص</h3>
+                <p><strong>التكلفة الإجمالية:</strong> <span id="total-cost-currency-ar">$</span><span id="total-cost-ar">0</span></p>
+                <p><strong>التكلفة لكل متدرب:</strong> <span id="cost-per-trainee-currency-ar">$</span><span id="cost-per-trainee-ar">0</span></p>
+                
+                <div class="export-buttons">
+                    <!-- Removed PDF export button from Arabic interface as requested -->
+                    <button id="export-excel-ar" class="export-btn">حفظ كملف Excel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Make jsPDF available globally
+        window.jspdf = window.jspdf || {};
+        window.jspdf.jsPDF = window.jspdf.jsPDF || window.jsPDF;
+        
+        // Set default date to today
+        function setDefaultDate() {
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            document.getElementById('calculation-date').value = formattedDate;
+            document.getElementById('calculation-date-ar').value = formattedDate;
+        }
+        
+        // Call the function when the page loads
+        window.addEventListener('DOMContentLoaded', setDefaultDate);
+        
+        // Currency symbols mapping
+        const currencySymbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'CNY': '¥',
+            'AED': 'د.إ',
+            'SAR': 'ر.س',
+            'CAD': 'C$',
+            'AUD': 'A$',
+            'INR': '₹'
+        };
+        
+        // Tab functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and tabs
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                
+                // Add active class to current button and tab
+                button.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Toggle night input fields based on radio selection
+        function setupNightInputToggle(radioDay, radioNight, nightsContainer) {
+            const container = document.getElementById(nightsContainer);
+            const radioPerDay = document.getElementById(radioDay);
+            const radioPerNight = document.getElementById(radioNight);
+            
+            // Initial state
+            container.style.display = radioPerNight.checked ? 'block' : 'none';
+            
+            // Add event listeners
+            radioPerDay.addEventListener('change', () => {
+                container.style.display = 'none';
+            });
+            
+            radioPerNight.addEventListener('change', () => {
+                container.style.display = 'block';
+            });
+        }
+        
+        // Set up toggle for trainer nights input in both English and Arabic
+        setupNightInputToggle('trainer-per-day', 'trainer-per-night', 'trainer-nights-container');
+        setupNightInputToggle('trainer-per-day-ar', 'trainer-per-night-ar', 'trainer-nights-container-ar');
+        
+        // Set up toggle for allowance nights input in both English and Arabic
+        setupNightInputToggle('allowance-per-day', 'allowance-per-night', 'allowance-nights-container');
+        setupNightInputToggle('allowance-per-day-ar', 'allowance-per-night-ar', 'allowance-nights-container-ar');
+
+        // Language toggle
+        const toggleLanguageBtn = document.getElementById('toggleLanguage');
+        const englishContent = document.getElementById('english-content');
+        const arabicContent = document.getElementById('arabic-content');
+        
+        toggleLanguageBtn.addEventListener('click', () => {
+            if (englishContent.style.display !== 'none') {
+                englishContent.style.display = 'none';
+                arabicContent.style.display = 'block';
+                toggleLanguageBtn.textContent = 'English';
+            } else {
+                englishContent.style.display = 'block';
+                arabicContent.style.display = 'none';
+                toggleLanguageBtn.textContent = 'العربية';
+            }
+        });
+
+        // Function to get current currency symbol
+        function getCurrentCurrencySymbol(isArabic = false) {
+            const prefix = isArabic ? '-ar' : '';
+            const currencySelect = document.getElementById('currency' + prefix);
+            return currencySymbols[currencySelect.value] || '$';
+        }
+        
+        // Function to get selected date
+        function getSelectedDate(isArabic = false) {
+            const prefix = isArabic ? '-ar' : '';
+            const dateInput = document.getElementById('calculation-date' + prefix);
+            return dateInput.value ? new Date(dateInput.value).toLocaleDateString() : new Date().toLocaleDateString();
+        }
+
+        // Function to gather calculation data (reused by both calculations and exports)
+        function gatherCalculationData(isArabic = false) {
+            const prefix = isArabic ? '-ar' : '';
+            
+            const trainees = parseInt(document.getElementById('trainees' + prefix).value);
+            const duration = parseInt(document.getElementById('duration' + prefix).value);
+            const trainers = parseInt(document.getElementById('trainers' + prefix).value) || 1;
+            const cofacilitators = parseInt(document.getElementById('cofacilitators' + prefix).value) || 0;
+            const venue = parseFloat(document.getElementById('venue' + prefix).value) || 0;
+            const trainer = parseFloat(document.getElementById('trainer' + prefix).value) || 0;
+            const trainerPeriod = isArabic ? 
+                document.querySelector('input[name="trainer-period-ar"]:checked').value : 
+                document.querySelector('input[name="trainer-period"]:checked').value;
+            const trainerNights = trainerPeriod === 'night' ? 
+                parseInt(document.getElementById('trainer-nights' + prefix).value) || 0 : 
+                0;
+            const cofacilitator = parseFloat(document.getElementById('cofacilitator' + prefix).value) || 0;
+            const equipment = parseFloat(document.getElementById('equipment' + prefix).value) || 0;
+            const printing = parseFloat(document.getElementById('printing' + prefix).value) || 0;
+            const catering = parseFloat(document.getElementById('catering' + prefix).value) || 0;
+            const management = parseFloat(document.getElementById('management' + prefix).value) || 0;
+            const materials = parseFloat(document.getElementById('materials' + prefix).value) || 0;
+            const tools = parseFloat(document.getElementById('tools' + prefix).value) || 0;
+            const consumables = parseFloat(document.getElementById('consumables' + prefix).value) || 0;
+            const allowance = parseFloat(document.getElementById('allowance' + prefix).value) || 0;
+            const allowancePeriod = isArabic ? 
+                document.querySelector('input[name="allowance-period-ar"]:checked').value : 
+                document.querySelector('input[name="allowance-period"]:checked').value;
+            const allowanceNights = allowancePeriod === 'night' ? 
+                parseInt(document.getElementById('allowance-nights' + prefix).value) || 0 : 
+                0;
+            const transport = parseFloat(document.getElementById('transport' + prefix).value) || 0;
+            const certification = parseFloat(document.getElementById('certification' + prefix).value) || 0;
+            
+            // Get currency symbol
+            const currencySymbol = getCurrentCurrencySymbol(isArabic);
+            const currencyCode = document.getElementById('currency' + prefix).value;
+            
+            // Get selected date
+            const calculationDate = getSelectedDate(isArabic);
+            
+            // Calculate costs
+            const venueCost = venue * duration;
+            
+            // Use either days or nights for trainer cost calculation
+            const trainerMultiplier = trainerPeriod === 'day' ? duration : trainerNights;
+            const trainerCost = trainer * trainerMultiplier * trainers;
+            
+            const cofacilitatorCost = cofacilitator * duration * cofacilitators;
+            const equipmentCost = equipment;
+            const printingCost = printing;
+            const cateringCost = catering * duration * (trainees + trainers + cofacilitators);
+            const managementCost = management;
+            const materialsCost = materials * trainees;
+            const toolsCost = tools * trainees;
+            const consumablesCost = consumables * trainees;
+            
+            // Use either days or nights for allowance cost calculation
+            const allowanceMultiplier = allowancePeriod === 'day' ? duration : allowanceNights;
+            const allowanceCost = allowance * trainees * allowanceMultiplier;
+            
+            const transportCost = transport * trainees * duration;
+            const certificationCost = certification * trainees;
+            
+            const totalFixedCost = venueCost + trainerCost + cofacilitatorCost + equipmentCost + printingCost + cateringCost + managementCost;
+            const totalPerTraineeCost = materialsCost + toolsCost + consumablesCost + allowanceCost + transportCost + certificationCost;
+            const totalCost = totalFixedCost + totalPerTraineeCost;
+            const costPerTrainee = totalCost / trainees;
+            
+            return {
+                trainees,
+                duration,
+                trainers,
+                cofacilitators,
+                venue,
+                trainer,
+                trainerPeriod,
+                trainerNights,
+                cofacilitator,
+                equipment,
+                printing,
+                catering,
+                management,
+                materials,
+                tools,
+                consumables,
+                allowance,
+                allowancePeriod,
+                allowanceNights,
+                transport,
+                certification,
+                venueCost,
+                trainerCost,
+                cofacilitatorCost,
+                equipmentCost,
+                printingCost,
+                cateringCost,
+                managementCost,
+                materialsCost,
+                toolsCost,
+                consumablesCost,
+                allowanceCost,
+                transportCost,
+                certificationCost,
+                totalFixedCost,
+                totalPerTraineeCost,
+                totalCost,
+                costPerTrainee,
+                currencySymbol,
+                currencyCode,
+                calculationDate
+            };
+        }
+
+        // Currency selection change handlers
+        document.getElementById('currency').addEventListener('change', function() {
+            document.getElementById('currency-ar').value = this.value;
+            updateCurrencyDisplay();
+        });
+        
+        document.getElementById('currency-ar').addEventListener('change', function() {
+            document.getElementById('currency').value = this.value;
+            updateCurrencyDisplay();
+        });
+        
+        // Function to update currency displays
+        function updateCurrencyDisplay() {
+            const englishSymbol = getCurrentCurrencySymbol(false);
+            const arabicSymbol = getCurrentCurrencySymbol(true);
+            
+            document.getElementById('total-cost-currency').textContent = englishSymbol;
+            document.getElementById('cost-per-trainee-currency').textContent = englishSymbol;
+            document.getElementById('total-cost-currency-ar').textContent = arabicSymbol;
+            document.getElementById('cost-per-trainee-currency-ar').textContent = arabicSymbol;
+        }
+
+        // English calculation
+        document.getElementById('calculate').addEventListener('click', () => {
+            const data = gatherCalculationData();
+            
+            // Update table with nights details
+            const costTable = document.getElementById('cost-table');
+            costTable.innerHTML = `
+                <tr><th>Item</th><th>Cost</th></tr>
+                <tr><td>Venue (${data.venue} x ${data.duration} days)</td><td>${data.currencySymbol}${data.venueCost.toFixed(2)}</td></tr>
+                <tr><td>Trainer/Facilitator (${data.trainer} x ${data.trainerPeriod === 'day' ? 
+                    data.duration + ' days' : 
+                    data.trainerNights + ' nights'} x ${data.trainers} trainers)</td><td>${data.currencySymbol}${data.trainerCost.toFixed(2)}</td></tr>
+                <tr><td>Co-Facilitator (${data.cofacilitator} x ${data.duration} days x ${data.cofacilitators} co-facilitators)</td><td>${data.currencySymbol}${data.cofacilitatorCost.toFixed(2)}</td></tr>
+                <tr><td>Equipment Rental</td><td>${data.currencySymbol}${data.equipmentCost.toFixed(2)}</td></tr>
+                <tr><td>Printing Services</td><td>${data.currencySymbol}${data.printingCost.toFixed(2)}</td></tr>
+                <tr><td>Catering (${data.catering} x ${data.duration} days x ${data.trainees + data.trainers + data.cofacilitators} people)</td><td>${data.currencySymbol}${data.cateringCost.toFixed(2)}</td></tr>
+                <tr><td>Service Management Fees</td><td>${data.currencySymbol}${data.managementCost.toFixed(2)}</td></tr>
+                <tr><td>Materials (${data.materials} x ${data.trainees} trainees)</td><td>${data.currencySymbol}${data.materialsCost.toFixed(2)}</td></tr>
+                <tr><td>Tools (${data.tools} x ${data.trainees} trainees)</td><td>${data.currencySymbol}${data.toolsCost.toFixed(2)}</td></tr>
+                <tr><td>Consumables (${data.consumables} x ${data.trainees} trainees)</td><td>${data.currencySymbol}${data.consumablesCost.toFixed(2)}</td></tr>
+                <tr><td>Fixed Allowance (${data.allowance} x ${data.trainees} trainees x ${data.allowancePeriod === 'day' ? 
+                    data.duration + ' days' : 
+                    data.allowanceNights + ' nights'}) per trainee/Participant</td><td>${data.currencySymbol}${data.allowanceCost.toFixed(2)}</td></tr>
+                <tr><td>Transport Allowance (${data.transport} x ${data.trainees} trainees x ${data.duration} days)</td><td>${data.currencySymbol}${data.transportCost.toFixed(2)}</td></tr>
+                <tr><td>Certification (${data.certification} x ${data.trainees} trainees)</td><td>${data.currencySymbol}${data.certificationCost.toFixed(2)}</td></tr>
+                <tr><td><strong>Total Fixed Costs</strong></td><td>${data.currencySymbol}${data.totalFixedCost.toFixed(2)}</td></tr>
+                <tr><td><strong>Total Per-Trainee Costs</strong></td><td>${data.currencySymbol}${data.totalPerTraineeCost.toFixed(2)}</td></tr>
+            `;
+            
+            document.getElementById('total-cost-currency').textContent = data.currencySymbol;
+            document.getElementById('total-cost').textContent = data.totalCost.toFixed(2);
+            document.getElementById('cost-per-trainee-currency').textContent = data.currencySymbol;
+            document.getElementById('cost-per-trainee').textContent = data.costPerTrainee.toFixed(2);
+            document.getElementById('results').style.display = 'block';
+        });
+
+        // Arabic calculation
+        document.getElementById('calculate-ar').addEventListener('click', () => {
+            const data = gatherCalculationData(true);
+            
+            // Update table with nights details in Arabic
+            const costTable = document.getElementById('cost-table-ar');
+            costTable.innerHTML = `
+                <tr><th>البند</th><th>التكلفة</th></tr>
+                <tr><td>المكان (${data.venue} × ${data.duration} يوم)</td><td>${data.currencySymbol}${data.venueCost.toFixed(2)}</td></tr>
+                <tr><td>المدرب/الميسر (${data.trainer} × ${data.trainerPeriod === 'day' ? 
+                    data.duration + ' يوم' : 
+                    data.trainerNights + ' ليلة'} × ${data.trainers} مدرب)</td><td>${data.currencySymbol}${data.trainerCost.toFixed(2)}</td></tr>
+                <tr><td>المساعد (${data.cofacilitator} × ${data.duration} يوم × ${data.cofacilitators} مساعد)</td><td>${data.currencySymbol}${data.cofacilitatorCost.toFixed(2)}</td></tr>
+                <tr><td>إيجار المعدات</td><td>${data.currencySymbol}${data.equipmentCost.toFixed(2)}</td></tr>
+                <tr><td>خدمات الطباعة</td><td>${data.currencySymbol}${data.printingCost.toFixed(2)}</td></tr>
+                <tr><td>الضيافة (${data.catering} × ${data.duration} يوم × ${data.trainees + data.trainers + data.cofacilitators} شخص)</td><td>${data.currencySymbol}${data.cateringCost.toFixed(2)}</td></tr>
+                <tr><td>رسوم إدارة الخدمة</td><td>${data.currencySymbol}${data.managementCost.toFixed(2)}</td></tr>
+                <tr><td>المواد (${data.materials} × ${data.trainees} متدرب)</td><td>${data.currencySymbol}${data.materialsCost.toFixed(2)}</td></tr>
+                <tr><td>الأدوات (${data.tools} × ${data.trainees} متدرب)</td><td>${data.currencySymbol}${data.toolsCost.toFixed(2)}</td></tr>
+                <tr><td>المواد الاستهلاكية (${data.consumables} × ${data.trainees} متدرب)</td><td>${data.currencySymbol}${data.consumablesCost.toFixed(2)}</td></tr>
+                <tr><td>البدل الثابت (${data.allowance} × ${data.trainees} متدرب × ${data.allowancePeriod === 'day' ? 
+                    data.duration + ' يوم' : 
+                    data.allowanceNights + ' ليلة'}) لكل متدرب/مشارك</td><td>${data.currencySymbol}${data.allowanceCost.toFixed(2)}</td></tr>
+                <tr><td>بدل النقل (${data.transport} × ${data.trainees} متدرب × ${data.duration} يوم)</td><td>${data.currencySymbol}${data.transportCost.toFixed(2)}</td></tr>
+                <tr><td>الشهادة (${data.certification} × ${data.trainees} متدرب)</td><td>${data.currencySymbol}${data.certificationCost.toFixed(2)}</td></tr>
+                <tr><td><strong>إجمالي التكاليف الثابتة</strong></td><td>${data.currencySymbol}${data.totalFixedCost.toFixed(2)}</td></tr>
+                <tr><td><strong>إجمالي تكاليف المتدربين</strong></td><td>${data.currencySymbol}${data.totalPerTraineeCost.toFixed(2)}</td></tr>
+            `;
+            
+            document.getElementById('total-cost-currency-ar').textContent = data.currencySymbol;
+            document.getElementById('total-cost-ar').textContent = data.totalCost.toFixed(2);
+            document.getElementById('cost-per-trainee-currency-ar').textContent = data.currencySymbol;
+            document.getElementById('cost-per-trainee-ar').textContent = data.costPerTrainee.toFixed(2);
+            document.getElementById('results-ar').style.display = 'block';
+        });
+
+        // Export to PDF - English
+        document.getElementById('export-pdf').addEventListener('click', () => {
+            const data = gatherCalculationData();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Training Cost Calculation', 14, 20);
+            
+            // Add date using the selected date
+            doc.setFontSize(12);
+            doc.text(`Date: ${data.calculationDate}`, 14, 30);
+            
+            // Add currency information
+            doc.text(`Currency: ${data.currencyCode} (${data.currencySymbol})`, 14, 37);
+            
+            // Add workshop info
+            doc.text(`Number of Trainees: ${data.trainees}`, 14, 44);
+            doc.text(`Workshop Duration: ${data.duration} days`, 14, 51);
+            doc.text(`Number of Trainers: ${data.trainers}`, 14, 58);
+            doc.text(`Number of Co-Facilitators: ${data.cofacilitators}`, 14, 65);
+            
+            // Add specific nights info if applicable
+            let yPosition = 72;
+            if (data.trainerPeriod === 'night') {
+                doc.text(`Trainer Nights: ${data.trainerNights}`, 14, yPosition);
+                yPosition += 7;
+            }
+            if (data.allowancePeriod === 'night') {
+                doc.text(`Allowance Nights: ${data.allowanceNights}`, 14, yPosition);
+                yPosition += 7;
+            }
+            
+            // Add cost table
+            const tableColumn = ["Item", `Cost (${data.currencySymbol})`];
+            const tableRows = [
+                ["Venue", data.venueCost.toFixed(2)],
+                [`Trainer/Facilitator (${data.trainerPeriod === 'day' ? 'per day' : 'per night'})`, data.trainerCost.toFixed(2)],
+                ["Co-Facilitator", data.cofacilitatorCost.toFixed(2)],
+                ["Equipment Rental", data.equipmentCost.toFixed(2)],
+                ["Printing Services", data.printingCost.toFixed(2)],
+                ["Catering", data.cateringCost.toFixed(2)],
+                ["Service Management Fees", data.managementCost.toFixed(2)],
+                ["Materials", data.materialsCost.toFixed(2)],
+                ["Tools", data.toolsCost.toFixed(2)],
+                ["Consumables", data.consumablesCost.toFixed(2)],
+                [`Fixed Allowance (${data.allowancePeriod === 'day' ? 'per day' : 'per night'}) per trainee/Participant`, data.allowanceCost.toFixed(2)],
+                ["Transport Allowance (per day)", data.transportCost.toFixed(2)],
+                ["Certification", data.certificationCost.toFixed(2)],
+                ["Total Fixed Costs", data.totalFixedCost.toFixed(2)],
+                ["Total Per-Trainee Costs", data.totalPerTraineeCost.toFixed(2)]
+            ];
+            
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: yPosition,
+            });
+            
+            // Add summary at the bottom
+            let finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(14);
+            doc.text(`Total Cost: ${data.currencySymbol}${data.totalCost.toFixed(2)}`, 14, finalY);
+            doc.text(`Cost Per Trainee: ${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`, 14, finalY + 7);
+            
+            // Save the PDF
+            doc.save('Training_Cost_Calculation.pdf');
+        });
+        
+        // Export to Excel - English
+        document.getElementById('export-excel').addEventListener('click', () => {
+            const data = gatherCalculationData();
+            
+            // Create worksheet with nights information
+            const worksheet = XLSX.utils.aoa_to_sheet([
+                ['Training Cost Calculation'],
+                ['Date', data.calculationDate],
+                ['Currency', `${data.currencyCode} (${data.currencySymbol})`],
+                [''],
+                ['Workshop Information'],
+                ['Number of Trainees', data.trainees],
+                ['Workshop Duration (days)', data.duration],
+                ['Number of Trainers', data.trainers],
+                ['Number of Co-Facilitators', data.cofacilitators],
+            ]);
+            
+            // Add nights information if applicable
+            let rowNum = 9;
+            if (data.trainerPeriod === 'night') {
+                XLSX.utils.sheet_add_aoa(worksheet, [['Trainer Nights', data.trainerNights]], {origin: rowNum});
+                rowNum++;
+            }
+            if (data.allowancePeriod === 'night') {
+                XLSX.utils.sheet_add_aoa(worksheet, [['Allowance Nights', data.allowanceNights]], {origin: rowNum});
+                rowNum++;
+            }
+            
+            // Add empty row and cost breakdown header
+            XLSX.utils.sheet_add_aoa(worksheet, [[''], ['Cost Breakdown']], {origin: rowNum});
+            rowNum += 2;
+            
+            // Add cost table
+            XLSX.utils.sheet_add_aoa(worksheet, [
+                ['Item', `Cost (${data.currencySymbol})`],
+                ['Venue', data.venueCost.toFixed(2)],
+                [`Trainer (${data.trainerPeriod === 'day' ? 'per day' : 'per night'})`, data.trainerCost.toFixed(2)],
+                ['Co-Facilitator', data.cofacilitatorCost.toFixed(2)],
+                ['Equipment Rental', data.equipmentCost.toFixed(2)],
+                ['Printing Services', data.printingCost.toFixed(2)],
+                ['Catering', data.cateringCost.toFixed(2)],
+                ['Service Management Fees', data.managementCost.toFixed(2)],
+                ['Materials', data.materialsCost.toFixed(2)],
+                ['Tools', data.toolsCost.toFixed(2)],
+                ['Consumables', data.consumablesCost.toFixed(2)],
+                [`Fixed Allowance (${data.allowancePeriod === 'day' ? 'per day' : 'per night'})`, data.allowanceCost.toFixed(2)],
+                ['Transport Allowance', data.transportCost.toFixed(2)],
+                ['Certification', data.certificationCost.toFixed(2)],
+                ['Total Fixed Costs', data.totalFixedCost.toFixed(2)],
+                ['Total Per-Trainee Costs', data.totalPerTraineeCost.toFixed(2)],
+                [''],
+                ['Summary'],
+                ['Total Cost', `${data.currencySymbol}${data.totalCost.toFixed(2)}`],
+                ['Cost Per Trainee', `${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`]
+            ], {origin: rowNum});
+            
+            // Create workbook
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Training Cost');
+            
+            // Generate Excel file and download
+            XLSX.writeFile(workbook, 'Training_Cost_Calculation.xlsx');
+        });
+        
+        // Export to Excel - Arabic
+        document.getElementById('export-excel-ar').addEventListener('click', () => {
+            const data = gatherCalculationData(true);
+            
+            // Create worksheet with nights information
+            const worksheet = XLSX.utils.aoa_to_sheet([
+                ['حساب تكلفة التدريب'],
+                ['التاريخ', data.calculationDate],
+                ['العملة', `${data.currencyCode} (${data.currencySymbol})`],
+                [''],
+                ['معلومات الورشة'],
+                ['عدد المتدربين', data.trainees],
+                ['مدة الورشة (بالأيام)', data.duration],
+                ['عدد المدربين', data.trainers],
+                ['عدد المساعدين', data.cofacilitators],
+            ]);
+            
+            // Add nights information if applicable
+            let rowNum = 9;
+            if (data.trainerPeriod === 'night') {
+                XLSX.utils.sheet_add_aoa(worksheet, [['عدد ليالي المدرب', data.trainerNights]], {origin: rowNum});
+                rowNum++;
+            }
+            if (data.allowancePeriod === 'night') {
+                XLSX.utils.sheet_add_aoa(worksheet, [['عدد ليالي البدل', data.allowanceNights]], {origin: rowNum});
+                rowNum++;
+            }
+            
+            // Add empty row and cost breakdown header
+            XLSX.utils.sheet_add_aoa(worksheet, [[''], ['تفصيل التكاليف']], {origin: rowNum});
+            rowNum += 2;
+            
+            // Add cost table
+            XLSX.utils.sheet_add_aoa(worksheet, [
+                ['البند', `التكلفة (${data.currencySymbol})`],
+                ['المكان', data.venueCost.toFixed(2)],
+                [`المدرب (${data.trainerPeriod === 'day' ? 'لليوم' : 'لليلة'})`, data.trainerCost.toFixed(2)],
+                ['المساعد', data.cofacilitatorCost.toFixed(2)],
+                ['إيجار المعدات', data.equipmentCost.toFixed(2)],
+                ['خدمات الطباعة', data.printingCost.toFixed(2)],
+                ['الضيافة', data.cateringCost.toFixed(2)],
+                ['رسوم إدارة الخدمة', data.managementCost.toFixed(2)],
+                ['المواد', data.materialsCost.toFixed(2)],
+                ['الأدوات', data.toolsCost.toFixed(2)],
+                ['المواد الاستهلاكية', data.consumablesCost.toFixed(2)],
+                [`البدل الثابت (${data.allowancePeriod === 'day' ? 'لليوم' : 'لليلة'})`, data.allowanceCost.toFixed(2)],
+                ['بدل النقل', data.transportCost.toFixed(2)],
+                ['الشهادة', data.certificationCost.toFixed(2)],
+                ['إجمالي التكاليف الثابتة', data.totalFixedCost.toFixed(2)],
+                ['إجمالي تكاليف المتدربين', data.totalPerTraineeCost.toFixed(2)],
+                [''],
+                ['الملخص'],
+                ['التكلفة الإجمالية', `${data.currencySymbol}${data.totalCost.toFixed(2)}`],
+                ['التكلفة لكل متدرب', `${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`]
+            ], {origin: rowNum});
+            
+            // Create workbook
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'تكلفة التدريب');
+            
+            // Generate Excel file and download
+            XLSX.writeFile(workbook, 'حساب_تكلفة_التدريب.xlsx');
+        });
+
+        // Set default values for night inputs when duration changes
+        document.getElementById('duration').addEventListener('input', function() {
+            const duration = parseInt(this.value) || 0;
+            const defaultNights = Math.max(0, duration - 1);
+            document.getElementById('trainer-nights').value = defaultNights;
+            document.getElementById('allowance-nights').value = defaultNights;
+            document.getElementById('trainer-nights-ar').value = defaultNights;
+            document.getElementById('allowance-nights-ar').value = defaultNights;
+        });
+        
+        document.getElementById('duration-ar').addEventListener('input', function() {
+            const duration = parseInt(this.value) || 0;
+            const defaultNights = Math.max(0, duration - 1);
+            document.getElementById('trainer-nights').value = defaultNights;
+            document.getElementById('allowance-nights').value = defaultNights;
+            document.getElementById('trainer-nights-ar').value = defaultNights;
+            document.getElementById('allowance-nights-ar').value = defaultNights;
+        });
+
+        // Sync inputs between English and Arabic interfaces
+        function syncInputs(englishId, arabicId) {
+            const englishInput = document.getElementById(englishId);
+            const arabicInput = document.getElementById(arabicId);
+            
+            englishInput.addEventListener('input', () => {
+                arabicInput.value = englishInput.value;
+            });
+            
+            arabicInput.addEventListener('input', () => {
+                englishInput.value = arabicInput.value;
+            });
+        }
+
+        // Sync radio buttons between English and Arabic interfaces
+        function syncRadioButtons(englishName, arabicName) {
+            const englishRadios = document.querySelectorAll(`input[name="${englishName}"]`);
+            const arabicRadios = document.querySelectorAll(`input[name="${arabicName}"]`);
+            
+            englishRadios.forEach((radio, index) => {
+                radio.addEventListener('change', () => {
+                    if (radio.checked) {
+                        arabicRadios[index].checked = true;
+                    }
+                });
+            });
+            
+            arabicRadios.forEach((radio, index) => {
+                radio.addEventListener('change', () => {
+                    if (radio.checked) {
+                        englishRadios[index].checked = true;
+                    }
+                });
+            });
+        }
+
+        // Sync all inputs including the new night inputs
+        syncInputs('calculation-date', 'calculation-date-ar');
+        syncInputs('trainees', 'trainees-ar');
+        syncInputs('duration', 'duration-ar');
+        syncInputs('trainers', 'trainers-ar');
+        syncInputs('cofacilitators', 'cofacilitators-ar');
+        syncInputs('venue', 'venue-ar');
+        syncInputs('trainer', 'trainer-ar');
+        syncInputs('trainer-nights', 'trainer-nights-ar');
+        syncInputs('cofacilitator', 'cofacilitator-ar');
+        syncInputs('equipment', 'equipment-ar');
+        syncInputs('printing', 'printing-ar');
+        syncInputs('catering', 'catering-ar');
+        syncInputs('management', 'management-ar');
+        syncInputs('materials', 'materials-ar');
+        syncInputs('tools', 'tools-ar');
+        syncInputs('consumables', 'consumables-ar');
+        syncInputs('allowance', 'allowance-ar');
+        syncInputs('allowance-nights', 'allowance-nights-ar');
+        syncInputs('transport', 'transport-ar');
+        syncInputs('certification', 'certification-ar');
+        
+        // Sync radio button selections
+        syncRadioButtons('trainer-period', 'trainer-period-ar');
+        syncRadioButtons('allowance-period', 'allowance-period-ar');
+        
+        // Initialize currency display
+        updateCurrencyDisplay();
+    </script>
+
+    <footer class="copyright">
+        &copy; 2025 Husham Jawad. All rights reserved. (Version 4.2)
+    </footer>
+    <div class="disclaimer">
+        Disclaimer: This calculator is provided for informational purposes only. Users should verify all calculations according to their organization's specific policies and procedures. The creator does not assume any liability for errors or inaccuracies.
+    </div>
+</body>
+</html>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Post Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #0a66c2;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
+        .info-banner {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 0;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .info-banner strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .toolbar-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .toolbar-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #555;
+            min-width: 100px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 2px solid #d0d0d0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: #0a66c2;
+            color: white;
+            border-color: #0a66c2;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .editor-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .editor-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        #input {
+            width: 100%;
+            min-height: 300px;
+            max-height: 500px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.6;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        #input:focus {
+            outline: none;
+            border-color: #0a66c2;
+        }
+
+        #output {
+            width: 100%;
+            min-height: 300px;
+            max-height: 500px;
+            padding: 15px;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.6;
+            background: #f8fff9;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .copy-section {
+            padding: 0 20px 20px 20px;
+            text-align: center;
+        }
+
+        .copy-btn {
+            padding: 14px 32px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .success-msg {
+            display: none;
+            color: #28a745;
+            margin-top: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .copyright {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .version {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .disclaimer {
+            color: #bdc3c7;
+            font-size: 12px;
+            font-style: italic;
+            border-top: 1px solid #34495e;
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .editor-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✨ LinkedIn Text Formatter</h1>
+            <p>Format text with Unicode characters that work on LinkedIn</p>
+        </div>
+
+        <div class="info-banner">
+            <strong>📝 How to use:</strong>
+            Type your post in the left box → Click formatting buttons → Copy the formatted text from the right box → Paste to LinkedIn!
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-row">
+                <span class="toolbar-label">📝 Text Style:</span>
+                <div class="btn-group">
+                    <button class="btn" onclick="applyFormat('bold')">𝗕 Bold</button>
+                    <button class="btn" onclick="applyFormat('italic')">𝘐 Italic</button>
+                    <button class="btn" onclick="applyFormat('bolditalic')">𝙄 Bold+Italic</button>
+                    <button class="btn" onclick="applyFormat('script')">𝓢 Script</button>
+                    <button class="btn" onclick="applyFormat('doublestruck')">𝔻 Double</button>
+                    <button class="btn" onclick="applyFormat('fullwidth')">Ｆ Fullwidth</button>
+                </div>
+            </div>
+
+            <div class="toolbar-row">
+                <span class="toolbar-label">🎨 Color Dots:</span>
+                <div class="btn-group">
+                    <button class="btn" style="background: #e3f2fd; border-color: #2196f3;" onclick="insertSymbol('🔵 ')">🔵 Blue</button>
+                    <button class="btn" style="background: #ffebee; border-color: #f44336;" onclick="insertSymbol('🔴 ')">🔴 Red</button>
+                    <button class="btn" style="background: #e8f5e9; border-color: #4caf50;" onclick="insertSymbol('🟢 ')">🟢 Green</button>
+                    <button class="btn" style="background: #fffde7; border-color: #ffeb3b;" onclick="insertSymbol('🟡 ')">🟡 Yellow</button>
+                    <button class="btn" style="background: #fff3e0; border-color: #ff9800;" onclick="insertSymbol('🟠 ')">🟠 Orange</button>
+                    <button class="btn" style="background: #f3e5f5; border-color: #9c27b0;" onclick="insertSymbol('🟣 ')">🟣 Purple</button>
+                </div>
+            </div>
+
+            <div class="toolbar-row">
+                <span class="toolbar-label">✨ Symbols:</span>
+                <div class="btn-group">
+                    <button class="btn" onclick="insertSymbol('• ')">• Bullet</button>
+                    <button class="btn" onclick="insertSymbol('▶ ')">▶ Arrow</button>
+                    <button class="btn" onclick="insertSymbol('✓ ')">✓ Check</button>
+                    <button class="btn" onclick="insertSymbol('★ ')">★ Star</button>
+                    <button class="btn" onclick="insertSymbol('→ ')">→ Next</button>
+                    <button class="btn" onclick="insertSymbol('💡 ')">💡 Idea</button>
+                    <button class="btn" onclick="insertSymbol('🚀 ')">🚀 Rocket</button>
+                    <button class="btn" onclick="insertSymbol('🎯 ')">🎯 Target</button>
+                </div>
+            </div>
+
+            <div class="toolbar-row">
+                <span class="toolbar-label">😊 Emojis:</span>
+                <div class="btn-group">
+                    <button class="btn" onclick="insertSymbol('✅ ')">✅ Done</button>
+                    <button class="btn" onclick="insertSymbol('❌ ')">❌ Wrong</button>
+                    <button class="btn" onclick="insertSymbol('⚡ ')">⚡ Power</button>
+                    <button class="btn" onclick="insertSymbol('🔥 ')">🔥 Fire</button>
+                    <button class="btn" onclick="insertSymbol('💯 ')">💯 100</button>
+                    <button class="btn" onclick="insertSymbol('👉 ')">👉 Point</button>
+                    <button class="btn" onclick="insertSymbol('👍 ')">👍 Like</button>
+                    <button class="btn" onclick="insertSymbol('❤️ ')">❤️ Heart</button>
+                </div>
+            </div>
+
+            <div class="toolbar-row">
+                <span class="toolbar-label">🔤 Letters:</span>
+                <div class="btn-group">
+                    <button class="btn" onclick="insertSymbol('🅰️')">🅰️</button>
+                    <button class="btn" onclick="insertSymbol('🅱️')">🅱️</button>
+                    <button class="btn" onclick="insertSymbol('🅾️')">🅾️</button>
+                    <button class="btn" onclick="insertSymbol('🅿️')">🅿️</button>
+                    <button class="btn" onclick="toggleCircledLetters()">Ⓐ-Ⓩ Circled</button>
+                </div>
+            </div>
+
+            <div class="toolbar-row" id="circledLetters" style="display: none;">
+                <span class="toolbar-label"></span>
+                <div class="btn-group" style="gap: 4px;">
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓐ')">Ⓐ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓑ')">Ⓑ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓒ')">Ⓒ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓓ')">Ⓓ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓔ')">Ⓔ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓕ')">Ⓕ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓖ')">Ⓖ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓗ')">Ⓗ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓘ')">Ⓘ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓙ')">Ⓙ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓚ')">Ⓚ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓛ')">Ⓛ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓜ')">Ⓜ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓝ')">Ⓝ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓞ')">Ⓞ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓟ')">Ⓟ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓠ')">Ⓠ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓡ')">Ⓡ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓢ')">Ⓢ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓣ')">Ⓣ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓤ')">Ⓤ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓥ')">Ⓥ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓦ')">Ⓦ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓧ')">Ⓧ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓨ')">Ⓨ</button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 13px;" onclick="insertSymbol('Ⓩ')">Ⓩ</button>
+                </div>
+            </div>
+
+            <div class="toolbar-row">
+                <span class="toolbar-label">🛠️ Tools:</span>
+                <div class="btn-group">
+                    <button class="btn" onclick="addLineBreaks()">📏 Add Spacing</button>
+                    <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-section">
+            <div class="editor-panel">
+                <div class="panel-title">📝 Your Text (Input)</div>
+                <div class="panel-subtitle">Select text then click Bold/Italic buttons above</div>
+                <textarea id="input" placeholder="Type your LinkedIn post here...
+
+Example:
+This is my post title
+
+Key points:
+First important point
+Second important point
+Third important point
+
+Try selecting some text and clicking Bold or Italic!">Type your LinkedIn post here...
+
+Example text that you can select and format!
+
+Select this text and click Bold or Italic above.</textarea>
+            </div>
+
+            <div class="editor-panel">
+                <div class="panel-title">✅ Formatted Output (Copy This!)</div>
+                <div class="panel-subtitle">This is what will appear on LinkedIn</div>
+                <div id="output"></div>
+            </div>
+        </div>
+
+        <div class="copy-section">
+            <button class="copy-btn" onclick="copyToLinkedIn()">📋 COPY TO LINKEDIN</button>
+            <div class="success-msg" id="successMsg">✅ Copied! Now paste it on LinkedIn!</div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-content">
+                <div class="copyright">
+                    © 2025 Husham Jawad Kadhim. All Rights Reserved.
+                </div>
+                <div class="version">
+                    Version 0.2 - 2025
+                </div>
+                <div class="disclaimer">
+                    <strong>Disclaimer:</strong> This tool uses Unicode characters to format text for LinkedIn. Formatted text may not be searchable on LinkedIn and may not display correctly on all devices or screen readers. Use responsibly and test your posts before publishing. The developer is not responsible for any issues arising from the use of this tool.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+
+        // Bold Unicode map (Mathematical Bold)
+        const boldMap = {
+            'A':'𝗔','B':'𝗕','C':'𝗖','D':'𝗗','E':'𝗘','F':'𝗙','G':'𝗚','H':'𝗛','I':'𝗜','J':'𝗝','K':'𝗞','L':'𝗟','M':'𝗠',
+            'N':'𝗡','O':'𝗢','P':'𝗣','Q':'𝗤','R':'𝗥','S':'𝗦','T':'𝗧','U':'𝗨','V':'𝗩','W':'𝗪','X':'𝗫','Y':'𝗬','Z':'𝗭',
+            'a':'𝗮','b':'𝗯','c':'𝗰','d':'𝗱','e':'𝗲','f':'𝗳','g':'𝗴','h':'𝗵','i':'𝗶','j':'𝗷','k':'𝗸','l':'𝗹','m':'𝗺',
+            'n':'𝗻','o':'𝗼','p':'𝗽','q':'𝗾','r':'𝗿','s':'𝘀','t':'𝘁','u':'𝘂','v':'𝘃','w':'𝘄','x':'𝘅','y':'𝘆','z':'𝘇',
+            '0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'
+        };
+
+        // Italic Unicode map (Mathematical Italic)
+        const italicMap = {
+            'A':'𝘈','B':'𝘉','C':'𝘊','D':'𝘋','E':'𝘌','F':'𝘍','G':'𝘎','H':'𝘏','I':'𝘐','J':'𝘑','K':'𝘒','L':'𝘓','M':'𝘔',
+            'N':'𝘕','O':'𝘖','P':'𝘗','Q':'𝘘','R':'𝘙','S':'𝘚','T':'𝘛','U':'𝘜','V':'𝘝','W':'𝘞','X':'𝘟','Y':'𝘠','Z':'𝘡',
+            'a':'𝘢','b':'𝘣','c':'𝘤','d':'𝘥','e':'𝘦','f':'𝘧','g':'𝘨','h':'𝘩','i':'𝘪','j':'𝘫','k':'𝘬','l':'𝘭','m':'𝘮',
+            'n':'𝘯','o':'𝘰','p':'𝘱','q':'𝘲','r':'𝘳','s':'𝘴','t':'𝘵','u':'𝘶','v':'𝘷','w':'𝘸','x':'𝘹','y':'𝘺','z':'𝘻'
+        };
+
+        // Bold+Italic Unicode map
+        const boldItalicMap = {
+            'A':'𝘼','B':'𝘽','C':'𝘾','D':'𝘿','E':'𝙀','F':'𝙁','G':'𝙂','H':'𝙃','I':'𝙄','J':'𝙅','K':'𝙆','L':'𝙇','M':'𝙈',
+            'N':'𝙉','O':'𝙊','P':'𝙋','Q':'𝙌','R':'𝙍','S':'𝙎','T':'𝙏','U':'𝙐','V':'𝙑','W':'𝙒','X':'𝙓','Y':'𝙔','Z':'𝙕',
+            'a':'𝙖','b':'𝙗','c':'𝙘','d':'𝙙','e':'𝙚','f':'𝙛','g':'𝙜','h':'𝙝','i':'𝙞','j':'𝙟','k':'𝙠','l':'𝙡','m':'𝙢',
+            'n':'𝙣','o':'𝙤','p':'𝙥','q':'𝙦','r':'𝙧','s':'𝙨','t':'𝙩','u':'𝙪','v':'𝙫','w':'𝙬','x':'𝙭','y':'𝙮','z':'𝙯'
+        };
+
+        // Script/Cursive Unicode map
+        const scriptMap = {
+            'A':'𝓐','B':'𝓑','C':'𝓒','D':'𝓓','E':'𝓔','F':'𝓕','G':'𝓖','H':'𝓗','I':'𝓘','J':'𝓙','K':'𝓚','L':'𝓛','M':'𝓜',
+            'N':'𝓝','O':'𝓞','P':'𝓟','Q':'𝓠','R':'𝓡','S':'𝓢','T':'𝓣','U':'𝓤','V':'𝓥','W':'𝓦','X':'𝓧','Y':'𝓨','Z':'𝓩',
+            'a':'𝓪','b':'𝓫','c':'𝓬','d':'𝓭','e':'𝓮','f':'𝓯','g':'𝓰','h':'𝓱','i':'𝓲','j':'𝓳','k':'𝓴','l':'𝓵','m':'𝓶',
+            'n':'𝓷','o':'𝓸','p':'𝓹','q':'𝓺','r':'𝓻','s':'𝓼','t':'𝓽','u':'𝓾','v':'𝓿','w':'𝔀','x':'𝔁','y':'𝔂','z':'𝔃'
+        };
+
+        // Double-struck Unicode map
+        const doubleStruckMap = {
+            'A':'𝔸','B':'𝔹','C':'ℂ','D':'𝔻','E':'𝔼','F':'𝔽','G':'𝔾','H':'ℍ','I':'𝕀','J':'𝕁','K':'𝕂','L':'𝕃','M':'𝕄',
+            'N':'ℕ','O':'𝕆','P':'ℙ','Q':'ℚ','R':'ℝ','S':'𝕊','T':'𝕋','U':'𝕌','V':'𝕍','W':'𝕎','X':'𝕏','Y':'𝕐','Z':'ℤ',
+            'a':'𝕒','b':'𝕓','c':'𝕔','d':'𝕕','e':'𝕖','f':'𝕗','g':'𝕘','h':'𝕙','i':'𝕚','j':'𝕛','k':'𝕜','l':'𝕝','m':'𝕞',
+            'n':'𝕟','o':'𝕠','p':'𝕡','q':'𝕢','r':'𝕣','s':'𝕤','t':'𝕥','u':'𝕦','v':'𝕧','w':'𝕨','x':'𝕩','y':'𝕪','z':'𝕫',
+            '0':'𝟘','1':'𝟙','2':'𝟚','3':'𝟛','4':'𝟜','5':'𝟝','6':'𝟞','7':'𝟟','8':'𝟠','9':'𝟡'
+        };
+
+        // Fullwidth Unicode map
+        const fullwidthMap = {
+            'A':'Ａ','B':'Ｂ','C':'Ｃ','D':'Ｄ','E':'Ｅ','F':'Ｆ','G':'Ｇ','H':'Ｈ','I':'Ｉ','J':'Ｊ','K':'Ｋ','L':'Ｌ','M':'Ｍ',
+            'N':'Ｎ','O':'Ｏ','P':'Ｐ','Q':'Ｑ','R':'Ｒ','S':'Ｓ','T':'Ｔ','U':'Ｕ','V':'Ｖ','W':'Ｗ','X':'Ｘ','Y':'Ｙ','Z':'Ｚ',
+            'a':'ａ','b':'ｂ','c':'ｃ','d':'ｄ','e':'ｅ','f':'ｆ','g':'ｇ','h':'ｈ','i':'ｉ','j':'ｊ','k':'ｋ','l':'ｌ','m':'ｍ',
+            'n':'ｎ','o':'ｏ','p':'ｐ','q':'ｑ','r':'ｒ','s':'ｓ','t':'ｔ','u':'ｕ','v':'ｖ','w':'ｗ','x':'ｘ','y':'ｙ','z':'ｚ',
+            '0':'０','1':'１','2':'２','3':'３','4':'４','5':'５','6':'６','7':'７','8':'８','9':'９'
+        };
+
+        // Convert text using character map
+        function convertText(text, map) {
+            return text.split('').map(char => map[char] || char).join('');
+        }
+
+        // Apply formatting to selected text
+        function applyFormat(type) {
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const selectedText = input.value.substring(start, end);
+
+            if (!selectedText) {
+                alert('⚠️ Please select some text first!\n\n1. Highlight the text you want to format\n2. Then click a style button');
+                return;
+            }
+
+            let formattedText;
+            if (type === 'bold') {
+                formattedText = convertText(selectedText, boldMap);
+            } else if (type === 'italic') {
+                formattedText = convertText(selectedText, italicMap);
+            } else if (type === 'bolditalic') {
+                formattedText = convertText(selectedText, boldItalicMap);
+            } else if (type === 'script') {
+                formattedText = convertText(selectedText, scriptMap);
+            } else if (type === 'doublestruck') {
+                formattedText = convertText(selectedText, doubleStruckMap);
+            } else if (type === 'fullwidth') {
+                formattedText = convertText(selectedText, fullwidthMap);
+            }
+
+            input.value = input.value.substring(0, start) + formattedText + input.value.substring(end);
+            input.focus();
+            input.setSelectionRange(start, start + formattedText.length);
+            updateOutput();
+        }
+
+        // Insert symbol at cursor position
+        function insertSymbol(symbol) {
+            const start = input.selectionStart;
+            input.value = input.value.substring(0, start) + symbol + input.value.substring(start);
+            input.focus();
+            input.setSelectionRange(start + symbol.length, start + symbol.length);
+            updateOutput();
+        }
+
+        // Toggle circled letters panel
+        function toggleCircledLetters() {
+            const panel = document.getElementById('circledLetters');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'flex';
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        // Add line breaks for better spacing
+        function addLineBreaks() {
+            const lines = input.value.split('\n');
+            const spacedLines = lines.map(line => line.trim()).filter(line => line).join('\n\n');
+            input.value = spacedLines;
+            updateOutput();
+        }
+
+        // Clear all text
+        function clearAll() {
+            if (confirm('Clear all text?')) {
+                input.value = '';
+                updateOutput();
+            }
+        }
+
+        // Update output display
+        function updateOutput() {
+            output.textContent = input.value;
+        }
+
+        // Copy to clipboard
+        function copyToLinkedIn() {
+            const text = output.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccess();
+            }).catch(() => {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showSuccess();
+            });
+        }
+
+        function showSuccess() {
+            const msg = document.getElementById('successMsg');
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        // Update output on input
+        input.addEventListener('input', updateOutput);
+
+        // Initial update
+        updateOutput();
+    </script>
+</body>
+</html>

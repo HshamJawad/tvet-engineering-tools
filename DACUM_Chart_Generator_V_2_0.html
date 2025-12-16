@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DACUM Chart Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        h2 {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        h3 {
+            color: #34495e;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1.05em;
+            margin-bottom: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        button {
+            cursor: pointer;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-add:hover {
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-remove {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn-remove:hover {
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.15em;
+        }
+
+        .btn-export:hover {
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-export-word {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.15em;
+        }
+
+        .btn-export-word:hover {
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-save-data {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.15em;
+        }
+
+        .btn-save-data:hover {
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-load-data {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.15em;
+        }
+
+        .btn-load-data:hover {
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-clear-all {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.15em;
+        }
+
+        .btn-clear-all:hover {
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        input[type="date"] {
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.05em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            width: 100%;
+        }
+
+        input[type="date"]:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 6px solid #f59e0b;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .info-box h3 {
+            color: #d97706;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-box p {
+            font-size: 1em;
+            line-height: 1.3;
+            color: #78716c;
+            margin-bottom: 6px;
+        }
+
+        .info-box .example-section {
+            margin-top: 12px;
+            font-style: italic;
+            background: rgba(255,255,255,0.7);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .info-box .example-section p {
+            margin-bottom: 2px;
+        }
+
+        .btn-toggle-info {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 6px 14px;
+            font-size: 0.85em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-toggle-info:hover {
+            box-shadow: 0 3px 10px rgba(245, 158, 11, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .image-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .image-preview {
+            width: 95px;
+            height: 95px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #f9fafb;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-preview.has-image {
+            border: 2px solid #10b981;
+            background: white;
+        }
+
+        .btn-add-image {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.95em;
+        }
+
+        .btn-add-image:hover {
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-remove-image {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .btn-remove-image:hover {
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .duty-row, .ks-row, .behavior-row {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #7dd3fc;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .duty-header, .ks-header, .behavior-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .task-list, .ks-list, .behavior-list {
+            margin-left: 20px;
+        }
+
+        .task-item, .ks-item, .behavior-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .task-label, .ks-label, .behavior-label {
+            width: 90px;
+            color: #666;
+            flex-shrink: 0;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .copyright {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #7f8c8d;
+            font-size: 1.05em;
+        }
+
+        .mb-10 {
+            margin-bottom: 10px;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .icon {
+            margin-right: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #e0e0e0;
+            gap: 10px;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 12px 12px 0 0;
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            transform: translateY(3px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .two-column {
+            display: flex;
+            gap: 25px;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 1.05em;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+
+        .section-container {
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .section-header-editable {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .section-header-editable h3 {
+            margin: 0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .section-header-editable h3[contenteditable="true"] {
+            background: #fff;
+            border: 2px solid #667eea;
+            outline: none;
+            cursor: text;
+        }
+
+        .btn-rename {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.95em;
+        }
+
+        .btn-rename:hover {
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-clear-section {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.95em;
+        }
+
+        .btn-clear-section:hover {
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 DACUM Chart Generator</h1>
+        
+        <div class="info-box" id="infoBox">
+            <h3>
+                🎯 How to Use This Tool
+                <button class="btn-toggle-info" onclick="toggleInfoBox()">Hide</button>
+            </h3>
+            <div id="infoBoxContent">
+                <p><strong>1.</strong> Enter the occupation title and job title</p>
+                <p><strong>2.</strong> Add duties and tasks using the provided forms</p>
+                <p><strong>3.</strong> Add knowledge, skills, and behaviors (optional)</p>
+                <p><strong>4.</strong> Export as PDF or Word document</p>
+                
+                <div class="example-section">
+                    <p><strong>📝 Format for tasks:</strong> Action Verb + Task/Activity (What) + Context (Where/How/Why if relevant)</p>
+                    <p><strong>💡 Example:</strong> "Calibrate testing equipment according to manufacturer specifications"</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="info-tab">📋 Chart Info</div>
+            <div class="tab" data-tab="duties-tab">✅ Duties & Tasks</div>
+            <div class="tab" data-tab="additional-info-tab">📚 Additional Info</div>
+        </div>
+        
+        <div class="tab-content active" id="info-tab">
+            <h2>DACUM Research Chart Information</h2>
+            
+            <div class="mb-20">
+                <div class="mb-10">
+                    <label for="dacumDate">📅 DACUM Date:</label>
+                    <input type="date" id="dacumDate" style="cursor: pointer;">
+                </div>
+                
+                <div class="mb-10">
+                    <label for="producedFor">🏢 Produced For:</label>
+                    <input type="text" id="producedFor" placeholder="e.g., Company/Organization Name">
+                    <div class="image-upload-container">
+                        <div class="image-preview" id="producedForImagePreview">
+                            <span style="color: #999; font-size: 0.9em;">No image</span>
+                        </div>
+                        <div>
+                            <button class="btn-add-image" onclick="document.getElementById('producedForImageInput').click()">
+                                🖼️ Add Logo
+                            </button>
+                            <button class="btn-remove-image" id="removeProducedForImage" onclick="removeImage('producedFor')" style="display: none;">
+                                🗑️ Remove
+                            </button>
+                            <input type="file" id="producedForImageInput" accept=".jpg,.jpeg,.png,.bmp" style="display: none;" onchange="handleImageUpload(event, 'producedFor')">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-10">
+                    <label for="producedBy">🎓 Produced By:</label>
+                    <input type="text" id="producedBy" placeholder="e.g., Training Institution Name">
+                    <div class="image-upload-container">
+                        <div class="image-preview" id="producedByImagePreview">
+                            <span style="color: #999; font-size: 0.9em;">No image</span>
+                        </div>
+                        <div>
+                            <button class="btn-add-image" onclick="document.getElementById('producedByImageInput').click()">
+                                🖼️ Add Logo
+                            </button>
+                            <button class="btn-remove-image" id="removeProducedByImage" onclick="removeImage('producedBy')" style="display: none;">
+                                🗑️ Remove
+                            </button>
+                            <input type="file" id="producedByImageInput" accept=".jpg,.jpeg,.png,.bmp" style="display: none;" onchange="handleImageUpload(event, 'producedBy')">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-10">
+                    <label for="occupationTitle">💼 Occupation Title:</label>
+                    <input type="text" id="occupationTitle" placeholder="e.g., Automotive Technician">
+                </div>
+                
+                <div class="mb-10">
+                    <label for="jobTitle">👔 Job Title:</label>
+                    <input type="text" id="jobTitle" placeholder="e.g., Service Technician Level 2">
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="duties-tab">
+            <h2>Duties and Tasks</h2>
+            <div id="dutiesContainer"></div>
+            <button class="btn-add" onclick="addDuty()">➕ Add Duty</button>
+        </div>
+        
+        <div class="tab-content" id="additional-info-tab">
+            <h2>Additional Information</h2>
+            <p style="color: #666; margin-bottom: 25px; font-size: 1.05em;">📝 Enter information for each section. Click the rename button to customize section headings.</p>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="knowledgeHeading" contenteditable="false">Knowledge Requirements</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('knowledgeHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('knowledgeInput', 'knowledgeHeading', 'Knowledge Requirements')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="knowledgeInput" placeholder="Enter each knowledge requirement on a new line&#10;Example:&#10;• Understanding of electrical systems&#10;• Knowledge of safety protocols&#10;• Familiarity with diagnostic tools"></textarea>
+            </div>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="skillsHeading" contenteditable="false">Skills Requirements</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('skillsHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('skillsInput', 'skillsHeading', 'Skills Requirements')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="skillsInput" placeholder="Enter each skill requirement on a new line&#10;Example:&#10;• Ability to read technical diagrams&#10;• Proficiency in using hand tools&#10;• Strong problem-solving skills"></textarea>
+            </div>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="behaviorsHeading" contenteditable="false">Worker Behaviors/Traits</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('behaviorsHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('behaviorsInput', 'behaviorsHeading', 'Worker Behaviors/Traits')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="behaviorsInput" placeholder="Enter each behavior or trait on a new line&#10;Example:&#10;• Attention to detail&#10;• Good communication skills&#10;• Team player&#10;• Safety conscious"></textarea>
+            </div>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="toolsHeading" contenteditable="false">Tools, Equipment, Supplies and Materials</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('toolsHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('toolsInput', 'toolsHeading', 'Tools, Equipment, Supplies and Materials')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="toolsInput" placeholder="Enter each tool/equipment on a new line&#10;Example:&#10;• Digital multimeter&#10;• Pneumatic impact wrench&#10;• Safety glasses&#10;• Hydraulic lift"></textarea>
+            </div>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="trendsHeading" contenteditable="false">Future Trends and Concerns</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('trendsHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('trendsInput', 'trendsHeading', 'Future Trends and Concerns')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="trendsInput" placeholder="Enter each trend/concern on a new line&#10;Example:&#10;• Increased use of electric vehicles&#10;• Advanced driver assistance systems&#10;• Sustainability requirements&#10;• Automation in manufacturing"></textarea>
+            </div>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="acronymsHeading" contenteditable="false">Acronyms</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('acronymsHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('acronymsInput', 'acronymsHeading', 'Acronyms')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="acronymsInput" placeholder="Enter acronyms and their definitions on separate lines&#10;Example:&#10;• OBD - On-Board Diagnostics&#10;• ECU - Engine Control Unit&#10;• TPMS - Tire Pressure Monitoring System&#10;• ABS - Anti-lock Braking System"></textarea>
+            </div>
+            
+            <div class="section-container">
+                <div class="section-header-editable">
+                    <h3 id="careerPathHeading" contenteditable="false">Career Path</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('careerPathHeading')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('careerPathInput', 'careerPathHeading', 'Career Path')">🗑️ Clear</button>
+                    </div>
+                </div>
+                <textarea id="careerPathInput" placeholder="Enter career progression information on separate lines&#10;Example:&#10;• Entry Level: Technician Apprentice&#10;• Mid Level: Certified Technician&#10;• Advanced: Senior Technician / Specialist&#10;• Management: Shop Foreman / Service Manager"></textarea>
+            </div>
+            
+            <!-- Container for custom sections -->
+            <div id="customSectionsContainer"></div>
+            
+            <!-- Add Section Button -->
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="btn-add" onclick="addCustomSection()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 24px; font-size: 1.05em;">
+                    ➕ Add Section
+                </button>
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button class="btn-save-data" onclick="saveToJSON()">
+                💾 Save to JSON
+            </button>
+            <button class="btn-load-data" onclick="document.getElementById('loadFileInput').click()">
+                📁 Load from JSON
+            </button>
+            <button class="btn-export" onclick="exportToPDF()">
+                📄 Export as PDF
+            </button>
+            <button class="btn-export-word" onclick="exportToWord()">
+                📝 Export as Word (DOCX)
+            </button>
+            <button class="btn-clear-all" onclick="clearAll()">
+                🗑️ Clear All
+            </button>
+        </div>
+        
+        <input type="file" id="loadFileInput" accept=".json" style="display: none;" onchange="loadFromJSON(event)">
+
+        <div id="status" class="status" style="display:none;"></div>
+        
+        <div class="copyright">
+            <p style="margin-bottom: 8px; font-size: 1em;">© 2025 DACUM Chart Generator | by Husham Jawad Kadhim | Version 2.0 | All Rights Reserved</p>
+            <p style="font-size: 0.85em; color: #999; font-style: italic;">
+                <strong>Disclaimer:</strong> This tool is provided "as is" without warranty of any kind. The developer assumes no responsibility 
+                for any inaccuracies, errors, omissions, or inconsistencies in the generated documents. Users are solely responsible 
+                for verifying and validating all content before use.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Store uploaded images
+        let producedForImage = null;
+        let producedByImage = null;
+        
+        // Track custom sections
+        let customSectionCounter = 0;
+
+        // Toggle info box visibility
+        function toggleInfoBox() {
+            const infoBoxContent = document.getElementById('infoBoxContent');
+            const toggleButton = document.querySelector('.btn-toggle-info');
+            
+            if (infoBoxContent.style.display === 'none') {
+                infoBoxContent.style.display = 'block';
+                toggleButton.textContent = 'Hide';
+            } else {
+                infoBoxContent.style.display = 'none';
+                toggleButton.textContent = 'Show';
+            }
+        }
+
+        // Handle image upload
+        function handleImageUpload(event, imageType) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp'];
+            if (!validTypes.includes(file.type)) {
+                showStatus('Please upload a valid image file (JPG, JPEG, PNG, or BMP)', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageData = e.target.result;
+                
+                // Store image data
+                if (imageType === 'producedFor') {
+                    producedForImage = imageData;
+                } else if (imageType === 'producedBy') {
+                    producedByImage = imageData;
+                }
+
+                // Display image preview
+                const previewDiv = document.getElementById(`${imageType}ImagePreview`);
+                previewDiv.innerHTML = `<img src="${imageData}" alt="${imageType} logo">`;
+                previewDiv.classList.add('has-image');
+
+                // Show remove button
+                document.getElementById(`remove${imageType.charAt(0).toUpperCase() + imageType.slice(1)}Image`).style.display = 'inline-block';
+
+                showStatus('Image uploaded successfully! ✓', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Remove uploaded image
+        function removeImage(imageType) {
+            if (confirm('Are you sure you want to remove this logo?')) {
+                // Clear image data
+                if (imageType === 'producedFor') {
+                    producedForImage = null;
+                } else if (imageType === 'producedBy') {
+                    producedByImage = null;
+                }
+
+                // Clear preview
+                const previewDiv = document.getElementById(`${imageType}ImagePreview`);
+                previewDiv.innerHTML = '<span style="color: #999; font-size: 0.9em;">No image</span>';
+                previewDiv.classList.remove('has-image');
+
+                // Hide remove button
+                document.getElementById(`remove${imageType.charAt(0).toUpperCase() + imageType.slice(1)}Image`).style.display = 'none';
+
+                // Clear file input
+                document.getElementById(`${imageType}ImageInput`).value = '';
+
+                showStatus('Image removed! ✓', 'success');
+            }
+        }
+
+        // Add custom section
+        function addCustomSection() {
+            customSectionCounter++;
+            const sectionId = `customSection${customSectionCounter}`;
+            const headingId = `${sectionId}Heading`;
+            const inputId = `${sectionId}Input`;
+            
+            const container = document.getElementById('customSectionsContainer');
+            
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'section-container';
+            sectionDiv.id = sectionId;
+            sectionDiv.innerHTML = `
+                <div class="section-header-editable">
+                    <h3 id="${headingId}" contenteditable="false">Custom Section ${customSectionCounter}</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-rename" onclick="toggleEditHeading('${headingId}')">✏️ Rename</button>
+                        <button class="btn-clear-section" onclick="clearSection('${inputId}', '${headingId}', 'Custom Section ${customSectionCounter}')">🗑️ Clear</button>
+                        <button class="btn-remove-section" onclick="removeCustomSection('${sectionId}')" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 8px 16px; font-size: 0.95em; border: none; border-radius: 8px; cursor: pointer;">
+                            ❌ Remove
+                        </button>
+                    </div>
+                </div>
+                <textarea id="${inputId}" placeholder="Enter information for this custom section on separate lines"></textarea>
+            `;
+            
+            container.appendChild(sectionDiv);
+            showStatus('Custom section added! ✓', 'success');
+        }
+
+        // Remove custom section
+        function removeCustomSection(sectionId) {
+            if (confirm('Are you sure you want to remove this section? This cannot be undone!')) {
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.remove();
+                    showStatus('Section removed! ✓', 'success');
+                }
+            }
+        }
+
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                this.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+                
+                // If duties tab is clicked and no duties exist, add one duty with one task
+                if (tabId === 'duties-tab') {
+                    const dutiesContainer = document.getElementById('dutiesContainer');
+                    if (dutiesContainer.children.length === 0) {
+                        addDuty();
+                        const currentDutyId = `duty_${dutyCount}`;
+                        addTask(currentDutyId);
+                    }
+                }
+            });
+        });
+
+        // Initialize: Add one duty with one task on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            addDuty();
+            const currentDutyId = `duty_${dutyCount}`;
+            addTask(currentDutyId);
+        });
+
+        // Duty management
+        let dutyCount = 0;
+        
+        function addDuty() {
+            dutyCount++;
+            const dutyDiv = document.createElement('div');
+            dutyDiv.className = 'duty-row';
+            dutyDiv.id = `duty_${dutyCount}`;
+            dutyDiv.innerHTML = `
+                <div class="duty-header">
+                    <h4>Duty ${dutyCount}</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-clear-section" onclick="clearDuty('duty_${dutyCount}')">🗑️ Clear</button>
+                        <button class="btn-remove" onclick="removeDuty('duty_${dutyCount}')">🗑️ Remove Duty</button>
+                    </div>
+                </div>
+                <input type="text" placeholder="Enter duty description" data-duty-id="duty_${dutyCount}">
+                <div class="task-list" id="tasks_duty_${dutyCount}"></div>
+                <button class="btn-add" onclick="addTask('duty_${dutyCount}')">➕ Add Task</button>
+            `;
+            document.getElementById('dutiesContainer').appendChild(dutyDiv);
+        }
+        
+        function removeDuty(dutyId) {
+            document.getElementById(dutyId).remove();
+        }
+        
+        let taskCounts = {};
+        
+        function addTask(dutyId) {
+            if (!taskCounts[dutyId]) taskCounts[dutyId] = 0;
+            taskCounts[dutyId]++;
+            
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task-item';
+            taskDiv.id = `task_${dutyId}_${taskCounts[dutyId]}`;
+            taskDiv.innerHTML = `
+                <span class="task-label">Task ${taskCounts[dutyId]}:</span>
+                <input type="text" style="flex: 1;" placeholder="Enter task description" data-task-id="${dutyId}_${taskCounts[dutyId]}">
+                <button class="btn-remove" onclick="removeTask('task_${dutyId}_${taskCounts[dutyId]}')">🗑️</button>
+            `;
+            document.getElementById(`tasks_${dutyId}`).appendChild(taskDiv);
+        }
+        
+        function removeTask(taskId) {
+            document.getElementById(taskId).remove();
+        }
+
+        // Toggle heading edit mode
+        function toggleEditHeading(headingId) {
+            const heading = document.getElementById(headingId);
+            const isEditable = heading.getAttribute('contenteditable') === 'true';
+            
+            if (isEditable) {
+                // Save and exit edit mode
+                heading.setAttribute('contenteditable', 'false');
+                heading.style.cursor = '';
+                showStatus('Heading updated! ✓', 'success');
+            } else {
+                // Enter edit mode
+                heading.setAttribute('contenteditable', 'true');
+                heading.focus();
+                
+                // Select all text
+                const range = document.createRange();
+                range.selectNodeContents(heading);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        // Clear section in Additional Info tab
+        function clearSection(inputId, headingId, defaultHeading) {
+            if (confirm('Are you sure you want to clear this section?')) {
+                document.getElementById(inputId).value = '';
+                document.getElementById(headingId).textContent = defaultHeading;
+                document.getElementById(headingId).setAttribute('contenteditable', 'false');
+                showStatus('Section cleared! ✓', 'success');
+            }
+        }
+
+        // Clear specific duty section
+        function clearDuty(dutyId) {
+            if (confirm('Are you sure you want to clear this duty and all its tasks?')) {
+                // Clear duty input
+                const dutyInput = document.querySelector(`[data-duty-id="${dutyId}"]`);
+                if (dutyInput) {
+                    dutyInput.value = '';
+                }
+                
+                // Clear all tasks
+                const taskInputs = document.querySelectorAll(`[data-task-id^="${dutyId}_"]`);
+                taskInputs.forEach(taskInput => {
+                    taskInput.value = '';
+                });
+                
+                showStatus('Duty cleared! ✓', 'success');
+            }
+        }
+
+        // Clear all data
+        function clearAll() {
+            if (confirm('Are you sure you want to clear ALL data? This cannot be undone!')) {
+                // Clear Chart Info
+                document.getElementById('dacumDate').value = '';
+                document.getElementById('producedFor').value = '';
+                document.getElementById('producedBy').value = '';
+                document.getElementById('occupationTitle').value = '';
+                document.getElementById('jobTitle').value = '';
+                
+                // Clear images
+                producedForImage = null;
+                producedByImage = null;
+                document.getElementById('producedForImagePreview').innerHTML = '<span style="color: #999; font-size: 0.9em;">No image</span>';
+                document.getElementById('producedForImagePreview').classList.remove('has-image');
+                document.getElementById('producedByImagePreview').innerHTML = '<span style="color: #999; font-size: 0.9em;">No image</span>';
+                document.getElementById('producedByImagePreview').classList.remove('has-image');
+                document.getElementById('removeProducedForImage').style.display = 'none';
+                document.getElementById('removeProducedByImage').style.display = 'none';
+                document.getElementById('producedForImageInput').value = '';
+                document.getElementById('producedByImageInput').value = '';
+                
+                // Clear all duties
+                document.getElementById('dutiesContainer').innerHTML = '';
+                dutyCount = 0;
+                taskCounts = {};
+                
+                // Reset Additional Info headings
+                document.getElementById('knowledgeHeading').textContent = 'Knowledge Requirements';
+                document.getElementById('skillsHeading').textContent = 'Skills Requirements';
+                document.getElementById('behaviorsHeading').textContent = 'Worker Behaviors/Traits';
+                document.getElementById('toolsHeading').textContent = 'Tools, Equipment, Supplies and Materials';
+                document.getElementById('trendsHeading').textContent = 'Future Trends and Concerns';
+                document.getElementById('acronymsHeading').textContent = 'Acronyms';
+                document.getElementById('careerPathHeading').textContent = 'Career Path';
+                
+                // Clear Additional Info textareas
+                document.getElementById('knowledgeInput').value = '';
+                document.getElementById('skillsInput').value = '';
+                document.getElementById('behaviorsInput').value = '';
+                document.getElementById('toolsInput').value = '';
+                document.getElementById('trendsInput').value = '';
+                document.getElementById('acronymsInput').value = '';
+                document.getElementById('careerPathInput').value = '';
+                
+                // Clear all custom sections
+                document.getElementById('customSectionsContainer').innerHTML = '';
+                customSectionCounter = 0;
+                
+                // Switch to Chart Info tab
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelector('[data-tab="info-tab"]').classList.add('active');
+                document.getElementById('info-tab').classList.add('active');
+                
+                showStatus('All data cleared! ✓', 'success');
+            }
+        }
+
+        // Save to JSON
+        function saveToJSON() {
+            try {
+                const data = {
+                    version: '1.0',
+                    savedDate: new Date().toISOString(),
+                    chartInfo: {
+                        dacumDate: document.getElementById('dacumDate').value,
+                        producedFor: document.getElementById('producedFor').value,
+                        producedBy: document.getElementById('producedBy').value,
+                        occupationTitle: document.getElementById('occupationTitle').value,
+                        jobTitle: document.getElementById('jobTitle').value,
+                        producedForImage: producedForImage,
+                        producedByImage: producedByImage
+                    },
+                    duties: [],
+                    additionalInfo: {
+                        headings: {
+                            knowledge: document.getElementById('knowledgeHeading').textContent,
+                            skills: document.getElementById('skillsHeading').textContent,
+                            behaviors: document.getElementById('behaviorsHeading').textContent,
+                            tools: document.getElementById('toolsHeading').textContent,
+                            trends: document.getElementById('trendsHeading').textContent,
+                            acronyms: document.getElementById('acronymsHeading').textContent,
+                            careerPath: document.getElementById('careerPathHeading').textContent
+                        },
+                        knowledge: document.getElementById('knowledgeInput').value,
+                        skills: document.getElementById('skillsInput').value,
+                        behaviors: document.getElementById('behaviorsInput').value,
+                        tools: document.getElementById('toolsInput').value,
+                        trends: document.getElementById('trendsInput').value,
+                        acronyms: document.getElementById('acronymsInput').value,
+                        careerPath: document.getElementById('careerPathInput').value
+                    },
+                    customSections: []
+                };
+
+                // Collect duties and tasks
+                const dutyInputs = document.querySelectorAll('[data-duty-id]');
+                dutyInputs.forEach(dutyInput => {
+                    const dutyText = dutyInput.value.trim();
+                    const dutyId = dutyInput.getAttribute('data-duty-id');
+                    const taskInputs = document.querySelectorAll(`[data-task-id^="${dutyId}_"]`);
+                    const tasks = [];
+                    
+                    taskInputs.forEach(taskInput => {
+                        const taskText = taskInput.value.trim();
+                        if (taskText) {
+                            tasks.push(taskText);
+                        }
+                    });
+                    
+                    data.duties.push({
+                        duty: dutyText,
+                        tasks: tasks
+                    });
+                });
+
+                // Collect custom sections
+                const customSectionsContainer = document.getElementById('customSectionsContainer');
+                const customSectionDivs = customSectionsContainer.querySelectorAll('.section-container');
+                customSectionDivs.forEach(sectionDiv => {
+                    const headingElement = sectionDiv.querySelector('h3');
+                    const textareaElement = sectionDiv.querySelector('textarea');
+                    if (headingElement && textareaElement) {
+                        data.customSections.push({
+                            heading: headingElement.textContent,
+                            content: textareaElement.value
+                        });
+                    }
+                });
+
+                // Create JSON file and download
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                const filename = data.chartInfo.occupationTitle || 'DACUM_Chart';
+                link.download = `${filename.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showStatus('Data saved successfully! ✓', 'success');
+            } catch (error) {
+                console.error('Error saving data:', error);
+                showStatus('Error saving data: ' + error.message, 'error');
+            }
+        }
+
+        // Load from JSON
+        function loadFromJSON(event) {
+            try {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // Load chart info
+                        if (data.chartInfo) {
+                            document.getElementById('dacumDate').value = data.chartInfo.dacumDate || '';
+                            document.getElementById('producedFor').value = data.chartInfo.producedFor || '';
+                            document.getElementById('producedBy').value = data.chartInfo.producedBy || '';
+                            document.getElementById('occupationTitle').value = data.chartInfo.occupationTitle || '';
+                            document.getElementById('jobTitle').value = data.chartInfo.jobTitle || '';
+                            
+                            // Restore images
+                            if (data.chartInfo.producedForImage) {
+                                producedForImage = data.chartInfo.producedForImage;
+                                document.getElementById('producedForImagePreview').innerHTML = `<img src="${producedForImage}" alt="Produced For logo">`;
+                                document.getElementById('producedForImagePreview').classList.add('has-image');
+                                document.getElementById('removeProducedForImage').style.display = 'inline-block';
+                            }
+                            
+                            if (data.chartInfo.producedByImage) {
+                                producedByImage = data.chartInfo.producedByImage;
+                                document.getElementById('producedByImagePreview').innerHTML = `<img src="${producedByImage}" alt="Produced By logo">`;
+                                document.getElementById('producedByImagePreview').classList.add('has-image');
+                                document.getElementById('removeProducedByImage').style.display = 'inline-block';
+                            }
+                        }
+
+                        // Clear existing duties
+                        document.getElementById('dutiesContainer').innerHTML = '';
+                        dutyCount = 0;
+                        taskCounts = {};
+
+                        // Load duties and tasks
+                        if (data.duties && Array.isArray(data.duties)) {
+                            data.duties.forEach(dutyData => {
+                                addDuty();
+                                const currentDutyId = `duty_${dutyCount}`;
+                                const dutyInput = document.querySelector(`[data-duty-id="${currentDutyId}"]`);
+                                if (dutyInput) {
+                                    dutyInput.value = dutyData.duty || '';
+                                }
+
+                                // Add tasks
+                                if (dutyData.tasks && Array.isArray(dutyData.tasks)) {
+                                    dutyData.tasks.forEach(taskText => {
+                                        addTask(currentDutyId);
+                                        const taskInputs = document.querySelectorAll(`[data-task-id^="${currentDutyId}_"]`);
+                                        const lastTaskInput = taskInputs[taskInputs.length - 1];
+                                        if (lastTaskInput) {
+                                            lastTaskInput.value = taskText;
+                                        }
+                                    });
+                                }
+                            });
+                        }
+
+                        // Load additional info
+                        if (data.additionalInfo) {
+                            // Load custom headings
+                            if (data.additionalInfo.headings) {
+                                document.getElementById('knowledgeHeading').textContent = data.additionalInfo.headings.knowledge || 'Knowledge Requirements';
+                                document.getElementById('skillsHeading').textContent = data.additionalInfo.headings.skills || 'Skills Requirements';
+                                document.getElementById('behaviorsHeading').textContent = data.additionalInfo.headings.behaviors || 'Worker Behaviors/Traits';
+                                document.getElementById('toolsHeading').textContent = data.additionalInfo.headings.tools || 'Tools, Equipment, Supplies and Materials';
+                                document.getElementById('trendsHeading').textContent = data.additionalInfo.headings.trends || 'Future Trends and Concerns';
+                                document.getElementById('acronymsHeading').textContent = data.additionalInfo.headings.acronyms || 'Acronyms';
+                                document.getElementById('careerPathHeading').textContent = data.additionalInfo.headings.careerPath || 'Career Path';
+                            }
+
+                            // Load text areas
+                            document.getElementById('knowledgeInput').value = data.additionalInfo.knowledge || '';
+                            document.getElementById('skillsInput').value = data.additionalInfo.skills || '';
+                            document.getElementById('behaviorsInput').value = data.additionalInfo.behaviors || '';
+                            document.getElementById('toolsInput').value = data.additionalInfo.tools || '';
+                            document.getElementById('trendsInput').value = data.additionalInfo.trends || '';
+                            document.getElementById('acronymsInput').value = data.additionalInfo.acronyms || '';
+                            document.getElementById('careerPathInput').value = data.additionalInfo.careerPath || '';
+                        }
+
+                        // Clear and load custom sections
+                        document.getElementById('customSectionsContainer').innerHTML = '';
+                        customSectionCounter = 0;
+                        
+                        if (data.customSections && Array.isArray(data.customSections)) {
+                            data.customSections.forEach(section => {
+                                addCustomSection();
+                                const lastSection = document.getElementById('customSectionsContainer').lastElementChild;
+                                if (lastSection) {
+                                    const headingElement = lastSection.querySelector('h3');
+                                    const textareaElement = lastSection.querySelector('textarea');
+                                    if (headingElement) headingElement.textContent = section.heading;
+                                    if (textareaElement) textareaElement.value = section.content;
+                                }
+                            });
+                        }
+
+                        // Switch to Chart Info tab
+                        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                        document.querySelector('[data-tab="info-tab"]').classList.add('active');
+                        document.getElementById('info-tab').classList.add('active');
+
+                        showStatus('Data loaded successfully! ✓', 'success');
+                        
+                        // Reset file input
+                        event.target.value = '';
+                    } catch (parseError) {
+                        console.error('Error parsing JSON:', parseError);
+                        showStatus('Error: Invalid JSON file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            } catch (error) {
+                console.error('Error loading file:', error);
+                showStatus('Error loading file: ' + error.message, 'error');
+            }
+        }
+
+        // Export to Word (DOCX)
+        async function exportToWord() {
+            try {
+                if (typeof window.docx === 'undefined') {
+                    showStatus('Error: Word export library not loaded. Please refresh the page.', 'error');
+                    return;
+                }
+
+                const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, Packer, PageBreak, convertInchesToTwip, ShadingType, TextDirection, ImageRun } = window.docx;
+
+                // Get all input values
+                const dacumDateValue = document.getElementById('dacumDate').value;
+                let dacumDate = '';
+                if (dacumDateValue) {
+                    const dateObj = new Date(dacumDateValue + 'T00:00:00');
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    const year = dateObj.getFullYear();
+                    dacumDate = `${month}/${day}/${year}`;
+                }
+                const producedFor = document.getElementById('producedFor').value;
+                const producedBy = document.getElementById('producedBy').value;
+                const occupationTitle = document.getElementById('occupationTitle').value;
+                const jobTitle = document.getElementById('jobTitle').value;
+
+                if (!occupationTitle || !jobTitle) {
+                    showStatus('Please fill in at least the Occupation Title and Job Title', 'error');
+                    return;
+                }
+
+                showStatus('Generating Word document...', 'success');
+
+                const children = [];
+
+                // ============ TITLE PAGE ============
+                children.push(new Paragraph({
+                    children: [
+                        new TextRun({
+                            text: `Occupation Title: ${occupationTitle}`,
+                            bold: true,
+                            size: 28, // 14pt
+                        }),
+                    ],
+                    spacing: { after: 200 },
+                    bidirectional: false,
+                }));
+
+                children.push(new Paragraph({
+                    children: [
+                        new TextRun({
+                            text: `Job Title: ${jobTitle}`,
+                            bold: true,
+                            size: 28, // 14pt
+                        }),
+                    ],
+                    spacing: { after: 200 },
+                    bidirectional: false,
+                }));
+
+                // Add DACUM Date if exists
+                if (dacumDate) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: `DACUM Date: ${dacumDate}`,
+                                bold: true,
+                                size: 24, // 12pt
+                            }),
+                        ],
+                        spacing: { after: 200 },
+                        bidirectional: false,
+                    }));
+                }
+
+                // Add Produced For if exists
+                if (producedFor) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: `Produced For: ${producedFor}`,
+                                bold: true,
+                                size: 24, // 12pt
+                            }),
+                        ],
+                        spacing: { after: 200 },
+                        bidirectional: false,
+                    }));
+                    
+                    // Add Produced For logo if exists
+                    if (producedForImage) {
+                        try {
+                            const base64Data = producedForImage.split(',')[1];
+                            
+                            children.push(new Paragraph({
+                                children: [
+                                    new ImageRun({
+                                        data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
+                                        transformation: {
+                                            width: 94, // 2.5cm = 94 points approximately
+                                            height: 94,
+                                        },
+                                    }),
+                                ],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 200 },
+                            }));
+                        } catch (imgError) {
+                            console.error('Error adding Produced For image:', imgError);
+                        }
+                    }
+                }
+
+                // Add Produced By if exists
+                if (producedBy) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: `Produced By: ${producedBy}`,
+                                bold: true,
+                                size: 24, // 12pt
+                            }),
+                        ],
+                        spacing: { after: 200 },
+                        bidirectional: false,
+                    }));
+                    
+                    // Add Produced By logo if exists
+                    if (producedByImage) {
+                        try {
+                            const base64Data = producedByImage.split(',')[1];
+                            
+                            children.push(new Paragraph({
+                                children: [
+                                    new ImageRun({
+                                        data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
+                                        transformation: {
+                                            width: 94, // 2.5cm = 94 points approximately
+                                            height: 94,
+                                        },
+                                    }),
+                                ],
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 400 },
+                            }));
+                        } catch (imgError) {
+                            console.error('Error adding Produced By image:', imgError);
+                        }
+                    }
+                } else {
+                    // Add extra spacing if no Produced By section
+                    children.push(new Paragraph({ spacing: { after: 200 } }));
+                }
+
+                // ============ DUTIES AND TASKS (NEW PAGE) ============
+                children.push(new Paragraph({
+                    children: [
+                        new PageBreak(),
+                        new TextRun({
+                            text: 'Duties and Tasks',
+                            bold: true,
+                            size: 28, // 14pt
+                        }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 },
+                    bidirectional: false,
+                }));
+
+                // Collect duties and tasks
+                const dutyInputs = document.querySelectorAll('[data-duty-id]');
+                const duties = [];
+                
+                dutyInputs.forEach(dutyInput => {
+                    const dutyText = dutyInput.value.trim();
+                    if (dutyText) {
+                        const dutyId = dutyInput.getAttribute('data-duty-id');
+                        const taskInputs = document.querySelectorAll(`[data-task-id^="${dutyId}_"]`);
+                        const tasks = [];
+                        
+                        taskInputs.forEach(taskInput => {
+                            const taskText = taskInput.value.trim();
+                            if (taskText) {
+                                tasks.push(taskText);
+                            }
+                        });
+                        
+                        duties.push({
+                            duty: dutyText,
+                            tasks: tasks
+                        });
+                    }
+                });
+
+                // Create a table for each duty
+                duties.forEach((dutyData, dutyIndex) => {
+                    const dutyLetter = String.fromCharCode(65 + dutyIndex); // A, B, C...
+                    const dutyLabel = `DUTY ${dutyLetter}: ${dutyData.duty}`;
+                    
+                    // Calculate number of rows needed (header + task rows)
+                    const tasksPerRow = 4;
+                    const numTaskRows = Math.ceil(dutyData.tasks.length / tasksPerRow);
+                    const tableRows = [];
+                    
+                    // Header row (duty description spans all 4 columns)
+                    tableRows.push(
+                        new TableRow({
+                            children: [
+                                new TableCell({
+                                    children: [
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({
+                                                    text: dutyLabel,
+                                                    bold: true,
+                                                    size: 24, // 12pt
+                                                }),
+                                            ],
+                                            bidirectional: false,
+                                        }),
+                                    ],
+                                    columnSpan: 4,
+                                    shading: {
+                                        fill: "E8E8E8", // Light gray
+                                        type: ShadingType.SOLID,
+                                    },
+                                    width: {
+                                        size: 100,
+                                        type: WidthType.PERCENTAGE,
+                                    },
+                                }),
+                            ],
+                        })
+                    );
+                    
+                    // Task rows (4 tasks per row)
+                    for (let row = 0; row < numTaskRows; row++) {
+                        const rowCells = [];
+                        
+                        for (let col = 0; col < tasksPerRow; col++) {
+                            const taskIndex = row * tasksPerRow + col;
+                            
+                            if (taskIndex < dutyData.tasks.length) {
+                                const taskLabel = `Task ${dutyLetter}${taskIndex + 1}`;
+                                const taskText = `${taskLabel}: ${dutyData.tasks[taskIndex]}`;
+                                
+                                rowCells.push(
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: taskText,
+                                                        size: 24, // 12pt
+                                                    }),
+                                                ],
+                                                bidirectional: false,
+                                            }),
+                                        ],
+                                        width: {
+                                            size: 25,
+                                            type: WidthType.PERCENTAGE,
+                                        },
+                                    })
+                                );
+                            } else {
+                                // Empty cell
+                                rowCells.push(
+                                    new TableCell({
+                                        children: [new Paragraph('')],
+                                        width: {
+                                            size: 25,
+                                            type: WidthType.PERCENTAGE,
+                                        },
+                                    })
+                                );
+                            }
+                        }
+                        
+                        tableRows.push(new TableRow({ children: rowCells }));
+                    }
+                    
+                    // Create the table with 16cm width
+                    children.push(
+                        new Table({
+                            width: {
+                                size: 9071, // 16cm in twips (16 * 567.05 ≈ 9071)
+                                type: WidthType.DXA,
+                            },
+                            layout: "fixed", // Fixed table layout for consistent width
+                            rows: tableRows,
+                        })
+                    );
+                    
+                    // Add spacing after table
+                    children.push(new Paragraph({ spacing: { after: 200 } }));
+                });
+
+                // ============ ADDITIONAL INFORMATION (NEW PAGE) ============
+                children.push(new Paragraph({
+                    children: [
+                        new PageBreak(),
+                        new TextRun({
+                            text: 'Additional Information',
+                            bold: true,
+                            size: 24, // 12pt
+                        }),
+                    ],
+                    spacing: { after: 300 },
+                    bidirectional: false,
+                }));
+
+                // Create 2-column tables for additional info
+                const additionalInfoSections = [
+                    {
+                        heading1: document.getElementById('knowledgeHeading').textContent,
+                        content1: document.getElementById('knowledgeInput').value.trim(),
+                        heading2: document.getElementById('behaviorsHeading').textContent,
+                        content2: document.getElementById('behaviorsInput').value.trim(),
+                    },
+                    {
+                        heading1: document.getElementById('skillsHeading').textContent,
+                        content1: document.getElementById('skillsInput').value.trim(),
+                        heading2: '', // Empty for single column
+                        content2: '',
+                    },
+                    {
+                        heading1: document.getElementById('toolsHeading').textContent,
+                        content1: document.getElementById('toolsInput').value.trim(),
+                        heading2: document.getElementById('trendsHeading').textContent,
+                        content2: document.getElementById('trendsInput').value.trim(),
+                    },
+                    {
+                        heading1: document.getElementById('acronymsHeading').textContent,
+                        content1: document.getElementById('acronymsInput').value.trim(),
+                        heading2: document.getElementById('careerPathHeading').textContent,
+                        content2: document.getElementById('careerPathInput').value.trim(),
+                    },
+                ];
+
+                additionalInfoSections.forEach((section, index) => {
+                    // Special handling for Acronyms (index 3, content1) - separate table with heading in first cell
+                    if (index === 3 && section.content1) {
+                        const row = new TableRow({
+                            children: [
+                                // First cell: Heading only with gray background
+                                new TableCell({
+                                    children: [
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({
+                                                    text: section.heading1,
+                                                    bold: true,
+                                                    size: 24, // 12pt
+                                                }),
+                                            ],
+                                            bidirectional: false,
+                                        }),
+                                    ],
+                                    shading: {
+                                        fill: "E8E8E8", // Light gray background
+                                        type: ShadingType.SOLID,
+                                    },
+                                    width: {
+                                        size: 30,
+                                        type: WidthType.PERCENTAGE,
+                                    },
+                                }),
+                                // Second cell: Content only
+                                new TableCell({
+                                    children: section.content1.split('\n').filter(line => line.trim()).map(line => 
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({
+                                                    text: line.trim().replace(/^[•\-*]\s*/, '• '),
+                                                    size: 24, // 12pt
+                                                }),
+                                            ],
+                                            bidirectional: false,
+                                        })
+                                    ),
+                                    width: {
+                                        size: 70,
+                                        type: WidthType.PERCENTAGE,
+                                    },
+                                }),
+                            ],
+                        });
+                        
+                        children.push(
+                            new Table({
+                                width: {
+                                    size: 9071, // 16cm in twips
+                                    type: WidthType.DXA,
+                                },
+                                layout: "fixed",
+                                rows: [row],
+                            })
+                        );
+                        
+                        children.push(new Paragraph({ spacing: { after: 200 } }));
+                    }
+                    // Regular format for all other sections (heading + content together)
+                    else if (section.content1 || section.content2) {
+                        const row = new TableRow({
+                            children: [
+                                // Left column
+                                new TableCell({
+                                    children: [
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({
+                                                    text: section.heading1,
+                                                    bold: true,
+                                                    size: 24, // 12pt
+                                                }),
+                                            ],
+                                            bidirectional: false,
+                                        }),
+                                        ...section.content1.split('\n').filter(line => line.trim()).map(line => 
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: line.trim().replace(/^[•\-*]\s*/, '• '),
+                                                        size: 24, // 12pt
+                                                    }),
+                                                ],
+                                                bidirectional: false,
+                                            })
+                                        ),
+                                    ],
+                                    width: {
+                                        size: 50,
+                                        type: WidthType.PERCENTAGE,
+                                    },
+                                }),
+                                // Right column
+                                new TableCell({
+                                    children: section.content2 ? [
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({
+                                                    text: section.heading2,
+                                                    bold: true,
+                                                    size: 24, // 12pt
+                                                }),
+                                            ],
+                                            bidirectional: false,
+                                        }),
+                                        ...section.content2.split('\n').filter(line => line.trim()).map(line => 
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: line.trim().replace(/^[•\-*]\s*/, '• '),
+                                                        size: 24, // 12pt
+                                                    }),
+                                                ],
+                                                bidirectional: false,
+                                            })
+                                        ),
+                                    ] : [new Paragraph('')],
+                                    width: {
+                                        size: 50,
+                                        type: WidthType.PERCENTAGE,
+                                    },
+                                }),
+                            ],
+                        });
+                        
+                        children.push(
+                            new Table({
+                                width: {
+                                    size: 9071, // 16cm in twips
+                                    type: WidthType.DXA,
+                                },
+                                layout: "fixed",
+                                rows: [row],
+                            })
+                        );
+                        
+                        children.push(new Paragraph({ spacing: { after: 200 } }));
+                    }
+                });
+
+                // Add custom sections
+                const customSectionsContainer = document.getElementById('customSectionsContainer');
+                const customSectionDivs = customSectionsContainer.querySelectorAll('.section-container');
+                
+                customSectionDivs.forEach(sectionDiv => {
+                    const headingElement = sectionDiv.querySelector('h3');
+                    const textareaElement = sectionDiv.querySelector('textarea');
+                    
+                    if (headingElement && textareaElement && textareaElement.value.trim()) {
+                        const row = new TableRow({
+                            children: [
+                                new TableCell({
+                                    children: [
+                                        new Paragraph({
+                                            children: [
+                                                new TextRun({
+                                                    text: headingElement.textContent,
+                                                    bold: true,
+                                                    size: 24, // 12pt
+                                                }),
+                                            ],
+                                            bidirectional: false,
+                                        }),
+                                        ...textareaElement.value.split('\n').filter(line => line.trim()).map(line => 
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: line.trim().replace(/^[•\-*]\s*/, '• '),
+                                                        size: 24, // 12pt
+                                                    }),
+                                                ],
+                                                bidirectional: false,
+                                            })
+                                        ),
+                                    ],
+                                    columnSpan: 2,
+                                    width: {
+                                        size: 100,
+                                        type: WidthType.PERCENTAGE,
+                                    },
+                                }),
+                            ],
+                        });
+                        
+                        children.push(
+                            new Table({
+                                width: {
+                                    size: 9071, // 16cm in twips
+                                    type: WidthType.DXA,
+                                },
+                                layout: "fixed", // Fixed table layout for consistent width
+                                rows: [row],
+                            })
+                        );
+                        
+                        children.push(new Paragraph({ spacing: { after: 200 } }));
+                    }
+                });
+
+                // Create document
+                const doc = new Document({
+                    sections: [{
+                        properties: {
+                            page: {
+                                margin: {
+                                    top: 1440,
+                                    right: 1440,
+                                    bottom: 1440,
+                                    left: 1440,
+                                },
+                            },
+                        },
+                        children: children,
+                    }],
+                });
+
+                // Generate and download
+                const blob = await Packer.toBlob(doc);
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${occupationTitle.replace(/[^a-z0-9]/gi, '_')}_${jobTitle.replace(/[^a-z0-9]/gi, '_')}_DACUM_Chart.docx`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showStatus('Word document exported successfully! ✓', 'success');
+
+            } catch (error) {
+                console.error('Error generating Word document:', error);
+                showStatus('Error generating Word document: ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+// PDF Export (original functionality preserved)
+document.addEventListener('DOMContentLoaded', function() {
+    const exportButton = document.querySelector('.btn-export');
+    
+    exportButton.addEventListener('click', exportToPDF);
+});
+
+function exportToPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // Get input values
+        const dacumDateInput = document.getElementById('dacumDate');
+        let dacumDateFormatted = '';
+        if (dacumDateInput.value) {
+            const dateObj = new Date(dacumDateInput.value + 'T00:00:00');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const year = dateObj.getFullYear();
+            dacumDateFormatted = `${month}-${day}-${year}`;
+        }
+        const producedForInput = document.getElementById('producedFor');
+        const producedByInput = document.getElementById('producedBy');
+        const occupationTitleInput = document.getElementById('occupationTitle');
+        const jobTitleInput = document.getElementById('jobTitle');
+        const toolsInput = document.getElementById('toolsInput');
+        const trendsInput = document.getElementById('trendsInput');
+        const acronymsInput = document.getElementById('acronymsInput');
+        
+        // Validation
+        if (!occupationTitleInput.value || !jobTitleInput.value) {
+            alert('Please fill in at least the Occupation Title and Job Title');
+            return;
+        }
+        
+        const margin = 10;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        let yPos = margin + 10;
+        
+        // ============ TITLE PAGE ============
+        pdf.setFontSize(18); // 18pt for main title
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`DACUM Research Chart for ${occupationTitleInput.value}`, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 15;
+        
+        // Two column layout for title page
+        const leftColX = margin + 10;
+        const rightColX = pageWidth / 2 + 10;
+        let leftY = yPos;
+        let rightY = yPos;
+        
+        // Left column - Produced For/By
+        if (producedForInput.value) {
+            pdf.setFontSize(16); // 16pt for labels
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Produced for', leftColX, leftY);
+            leftY += 7;
+            
+            // Add logo if exists
+            if (producedForImage) {
+                try {
+                    const imgWidth = 30;
+                    const imgHeight = 20;
+                    pdf.addImage(producedForImage, 'JPEG', leftColX, leftY, imgWidth, imgHeight);
+                    leftY += imgHeight + 5;
+                } catch (e) {
+                    console.error('Error adding Produced For image:', e);
+                }
+            }
+            
+            pdf.setFont(undefined, 'normal');
+            pdf.setFontSize(14); // 14pt for content
+            pdf.text(producedForInput.value, leftColX, leftY);
+            leftY += 15;
+        }
+        
+        if (producedByInput.value) {
+            pdf.setFontSize(16); // 16pt for labels
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Produced by', leftColX, leftY);
+            leftY += 7;
+            
+            // Add logo if exists
+            if (producedByImage) {
+                try {
+                    const imgWidth = 30;
+                    const imgHeight = 20;
+                    pdf.addImage(producedByImage, 'JPEG', leftColX, leftY, imgWidth, imgHeight);
+                    leftY += imgHeight + 5;
+                } catch (e) {
+                    console.error('Error adding Produced By image:', e);
+                }
+            }
+            
+            pdf.setFont(undefined, 'normal');
+            pdf.setFontSize(14); // 14pt for content
+            pdf.text(producedByInput.value, leftColX, leftY);
+            leftY += 10;
+        }
+        
+        if (dacumDateFormatted) {
+            pdf.setFontSize(14); // 14pt for date
+            pdf.setFont(undefined, 'bold');
+            pdf.text(dacumDateFormatted, leftColX, leftY);
+        }
+        
+        // Right column - Job info
+        pdf.setFontSize(16); // 16pt for labels
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Occupation:', rightColX, rightY);
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(14); // 14pt for content
+        pdf.text(jobTitleInput.value, rightColX + 30, rightY);
+        rightY += 7;
+        
+        pdf.setFontSize(16); // 16pt for labels
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Job:', rightColX, rightY);
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(14); // 14pt for content
+        pdf.text(occupationTitleInput.value, rightColX + 15, rightY);
+        
+        // ============ DACUM CHART GRID ============
+        pdf.addPage('a4', 'landscape');
+        yPos = margin + 5;
+        
+        // Collect duties and tasks
+        const dutyInputs = document.querySelectorAll('[data-duty-id]');
+        const duties = [];
+        
+        dutyInputs.forEach(dutyInput => {
+            const dutyText = dutyInput.value.trim();
+            if (dutyText) {
+                const dutyId = dutyInput.getAttribute('data-duty-id');
+                const taskInputs = document.querySelectorAll(`[data-task-id^="${dutyId}_"]`);
+                const tasks = [];
+                
+                taskInputs.forEach(taskInput => {
+                    const taskText = taskInput.value.trim();
+                    if (taskText) {
+                        tasks.push(taskText);
+                    }
+                });
+                
+                duties.push({
+                    duty: dutyText,
+                    tasks: tasks
+                });
+            }
+        });
+        
+        if (duties.length === 0) {
+            showStatus('Please add at least one duty with tasks', 'error');
+            return;
+        }
+        
+        // DUTIES AND TASKS header
+        pdf.setFillColor(200, 200, 200);
+        pdf.rect(margin, yPos, pageWidth - (margin * 2), 8, 'FD');
+        pdf.setFontSize(14); // 14pt for heading
+        pdf.setFont(undefined, 'bold');
+        pdf.text('DUTIES AND TASKS', pageWidth / 2, yPos + 5.5, { align: 'center' });
+        yPos += 8;
+        
+        // Calculate columns (max 4 duties per row)
+        const maxCols = 4;
+        const chartWidth = pageWidth - (margin * 2);
+        const colWidth = chartWidth / maxCols;
+        
+        let dutyIndex = 0;
+        
+        while (dutyIndex < duties.length) {
+            const dutiesThisRow = Math.min(maxCols, duties.length - dutyIndex);
+            
+            // Draw duty headers
+            let maxHeaderHeight = 10;
+            pdf.setFillColor(220, 220, 220);
+            
+            for (let col = 0; col < dutiesThisRow; col++) {
+                const duty = duties[dutyIndex + col];
+                const x = margin + (col * colWidth);
+                const letter = String.fromCharCode(65 + dutyIndex + col);
+                
+                pdf.rect(x, yPos, colWidth, 10, 'S');
+                pdf.setFontSize(14); // 14pt for duty headers
+                pdf.setFont(undefined, 'bold');
+                
+                const headerText = `DUTY ${letter}: ${duty.duty}`;
+                const lines = pdf.splitTextToSize(headerText, colWidth - 3);
+                const textHeight = lines.length * 4.5 + 3; // Adjusted for larger font
+                maxHeaderHeight = Math.max(maxHeaderHeight, textHeight);
+            }
+            
+            // Redraw with correct height
+            for (let col = 0; col < dutiesThisRow; col++) {
+                const duty = duties[dutyIndex + col];
+                const x = margin + (col * colWidth);
+                const letter = String.fromCharCode(65 + dutyIndex + col);
+                
+                pdf.setFillColor(220, 220, 220);
+                pdf.rect(x, yPos, colWidth, maxHeaderHeight, 'FD');
+                
+                pdf.setFontSize(14); // 14pt for duty headers
+                const headerText = `DUTY ${letter}: ${duty.duty}`;
+                const lines = pdf.splitTextToSize(headerText, colWidth - 3);
+                pdf.text(lines, x + 1.5, yPos + 4.5);
+            }
+            
+            yPos += maxHeaderHeight;
+            
+            // Draw tasks
+            const maxTasks = Math.max(...duties.slice(dutyIndex, dutyIndex + dutiesThisRow).map(d => d.tasks.length));
+            
+            for (let taskRow = 0; taskRow < maxTasks; taskRow++) {
+                let rowHeight = 15;
+                
+                // Calculate row height
+                for (let col = 0; col < dutiesThisRow; col++) {
+                    const duty = duties[dutyIndex + col];
+                    if (duty.tasks[taskRow]) {
+                        pdf.setFontSize(12); // 12pt for task text
+                        const letter = String.fromCharCode(65 + dutyIndex + col);
+                        const taskText = `Task ${letter}${taskRow + 1}:\n${duty.tasks[taskRow]}`;
+                        const lines = pdf.splitTextToSize(taskText, colWidth - 3);
+                        const textHeight = lines.length * 4 + 3; // Adjusted for larger font
+                        rowHeight = Math.max(rowHeight, textHeight);
+                    }
+                }
+                
+                // Check page break
+                if (yPos + rowHeight > pageHeight - margin - 5) {
+                    pdf.addPage('a4', 'landscape');
+                    yPos = margin + 5;
+                    
+                    // Repeat header
+                    pdf.setFillColor(200, 200, 200);
+                    pdf.rect(margin, yPos, pageWidth - (margin * 2), 8, 'FD');
+                    pdf.setFontSize(14); // 14pt for heading
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text('DUTIES AND TASKS (continued)', pageWidth / 2, yPos + 5.5, { align: 'center' });
+                    yPos += 8;
+                }
+                
+                // Draw task cells
+                pdf.setFont(undefined, 'normal');
+                pdf.setFontSize(12); // 12pt for task text
+                
+                for (let col = 0; col < dutiesThisRow; col++) {
+                    const duty = duties[dutyIndex + col];
+                    const x = margin + (col * colWidth);
+                    
+                    pdf.rect(x, yPos, colWidth, rowHeight, 'S');
+                    
+                    if (duty.tasks[taskRow]) {
+                        const letter = String.fromCharCode(65 + dutyIndex + col);
+                        const taskText = `Task ${letter}${taskRow + 1}:\n${duty.tasks[taskRow]}`;
+                        const lines = pdf.splitTextToSize(taskText, colWidth - 3);
+                        pdf.text(lines, x + 1.5, yPos + 3);
+                    }
+                }
+                
+                yPos += rowHeight;
+            }
+            
+            dutyIndex += dutiesThisRow;
+            
+            if (dutyIndex < duties.length) {
+                pdf.addPage('a4', 'landscape');
+                yPos = margin + 5;
+                
+                pdf.setFillColor(200, 200, 200);
+                pdf.rect(margin, yPos, pageWidth - (margin * 2), 8, 'FD');
+                pdf.setFontSize(14); // 14pt for heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text('DUTIES AND TASKS (continued)', pageWidth / 2, yPos + 5.5, { align: 'center' });
+                yPos += 8;
+            }
+        }
+        
+        // ============ KNOWLEDGE, SKILLS, BEHAVIORS ============
+        const knowledgeText = document.getElementById('knowledgeInput').value.trim();
+        const skillsText = document.getElementById('skillsInput').value.trim();
+        const behaviorsText = document.getElementById('behaviorsInput').value.trim();
+        
+        if (knowledgeText || skillsText || behaviorsText) {
+            pdf.addPage('a4', 'landscape');
+            yPos = margin + 5;
+            
+            pdf.setFontSize(14); // 14pt for main heading
+            pdf.setFont(undefined, 'bold');
+            pdf.text('General Knowledge and Skills', pageWidth / 2, yPos, { align: 'center' });
+            yPos += 8;
+            
+            const thirdWidth = (pageWidth - (margin * 2)) / 3;
+            let col1Y = yPos;
+            let col2Y = yPos;
+            let col3Y = yPos;
+            
+            if (knowledgeText) {
+                const heading = document.getElementById('knowledgeHeading').textContent;
+                pdf.setFontSize(14); // 14pt for section heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text(heading, margin, col1Y);
+                col1Y += 6;
+                
+                pdf.setFontSize(12); // 12pt for content
+                pdf.setFont(undefined, 'normal');
+                const items = knowledgeText.split('\n').filter(line => line.trim());
+                items.forEach(item => {
+                    const clean = item.trim().replace(/^[•\-*]\s*/, '');
+                    pdf.text(clean, margin, col1Y);
+                    col1Y += 4.5;
+                });
+            }
+            
+            if (skillsText) {
+                const heading = document.getElementById('skillsHeading').textContent;
+                pdf.setFontSize(14); // 14pt for section heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text(heading, margin + thirdWidth, col2Y);
+                col2Y += 6;
+                
+                pdf.setFontSize(12); // 12pt for content
+                pdf.setFont(undefined, 'normal');
+                const items = skillsText.split('\n').filter(line => line.trim());
+                items.forEach(item => {
+                    const clean = item.trim().replace(/^[•\-*]\s*/, '');
+                    pdf.text(clean, margin + thirdWidth, col2Y);
+                    col2Y += 4.5;
+                });
+            }
+            
+            if (behaviorsText) {
+                const heading = document.getElementById('behaviorsHeading').textContent;
+                pdf.setFontSize(14); // 14pt for section heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text(heading, margin + (thirdWidth * 2), col3Y);
+                col3Y += 6;
+                
+                pdf.setFontSize(12); // 12pt for content
+                pdf.setFont(undefined, 'normal');
+                const items = behaviorsText.split('\n').filter(line => line.trim());
+                items.forEach(item => {
+                    const clean = item.trim().replace(/^[•\-*]\s*/, '');
+                    pdf.text(clean, margin + (thirdWidth * 2), col3Y);
+                    col3Y += 4.5;
+                });
+            }
+        }
+        
+        // ============ TOOLS AND TRENDS ============
+        const tools = toolsInput.value.trim() ? toolsInput.value.split('\n').filter(line => line.trim()) : [];
+        const trends = trendsInput.value.trim() ? trendsInput.value.split('\n').filter(line => line.trim()) : [];
+        
+        if (tools.length > 0 || trends.length > 0) {
+            pdf.addPage('a4', 'landscape');
+            yPos = margin + 5;
+            
+            const halfWidth = (pageWidth - (margin * 2) - 5) / 2;
+            let leftY = yPos;
+            let rightY = yPos;
+            
+            if (tools.length > 0) {
+                const heading = document.getElementById('toolsHeading').textContent;
+                pdf.setFontSize(14); // 14pt for section heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text(heading, margin, leftY);
+                leftY += 6;
+                
+                pdf.setFontSize(12); // 12pt for content
+                pdf.setFont(undefined, 'normal');
+                tools.forEach(tool => {
+                    const clean = tool.trim().replace(/^[•\-*]\s*/, '');
+                    pdf.text(clean, margin, leftY);
+                    leftY += 4.5;
+                });
+            }
+            
+            if (trends.length > 0) {
+                const heading = document.getElementById('trendsHeading').textContent;
+                pdf.setFontSize(14); // 14pt for section heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text(heading, margin + halfWidth + 5, rightY);
+                rightY += 6;
+                
+                pdf.setFontSize(12); // 12pt for content
+                pdf.setFont(undefined, 'normal');
+                trends.forEach(trend => {
+                    const clean = trend.trim().replace(/^[•\-*]\s*/, '');
+                    pdf.text(clean, margin + halfWidth + 5, rightY);
+                    rightY += 4.5;
+                });
+            }
+        }
+        
+        // ============ ACRONYMS ============
+        if (acronymsInput.value.trim()) {
+            pdf.addPage('a4', 'landscape');
+            yPos = margin + 5;
+            
+            const heading = document.getElementById('acronymsHeading').textContent;
+            pdf.setFontSize(14); // 14pt for section heading
+            pdf.setFont(undefined, 'bold');
+            pdf.text(heading, margin, yPos);
+            yPos += 6;
+            
+            pdf.setFontSize(12); // 12pt for content
+            pdf.setFont(undefined, 'normal');
+            const acronyms = acronymsInput.value.split('\n').filter(line => line.trim());
+            acronyms.forEach(acronym => {
+                const clean = acronym.trim().replace(/^[•\-*]\s*/, '');
+                pdf.text(clean, margin, yPos);
+                yPos += 4.5;
+            });
+        }
+        
+        // ============ CAREER PATH ============
+        const careerPathInput = document.getElementById('careerPathInput');
+        if (careerPathInput && careerPathInput.value.trim()) {
+            pdf.addPage('a4', 'landscape');
+            yPos = margin + 5;
+            
+            const heading = document.getElementById('careerPathHeading').textContent;
+            pdf.setFontSize(14); // 14pt for section heading
+            pdf.setFont(undefined, 'bold');
+            pdf.text(heading, margin, yPos);
+            yPos += 6;
+            
+            pdf.setFontSize(12); // 12pt for content
+            pdf.setFont(undefined, 'normal');
+            const careerPathItems = careerPathInput.value.split('\n').filter(line => line.trim());
+            careerPathItems.forEach(item => {
+                const clean = item.trim().replace(/^[•\-*]\s*/, '');
+                pdf.text(clean, margin, yPos);
+                yPos += 4.5;
+            });
+        }
+        
+        // ============ CUSTOM SECTIONS ============
+        const customSectionsContainer = document.getElementById('customSectionsContainer');
+        const customSectionDivs = customSectionsContainer.querySelectorAll('.section-container');
+        customSectionDivs.forEach(sectionDiv => {
+            const headingElement = sectionDiv.querySelector('h3');
+            const textareaElement = sectionDiv.querySelector('textarea');
+            
+            if (headingElement && textareaElement && textareaElement.value.trim()) {
+                pdf.addPage('a4', 'landscape');
+                yPos = margin + 5;
+                
+                pdf.setFontSize(14); // 14pt for section heading
+                pdf.setFont(undefined, 'bold');
+                pdf.text(headingElement.textContent, margin, yPos);
+                yPos += 6;
+                
+                pdf.setFontSize(12); // 12pt for content
+                pdf.setFont(undefined, 'normal');
+                const items = textareaElement.value.split('\n').filter(line => line.trim());
+                items.forEach(item => {
+                    const clean = item.trim().replace(/^[•\-*]\s*/, '');
+                    pdf.text(clean, margin, yPos);
+                    yPos += 4.5;
+                });
+            }
+        });
+        
+        pdf.save(`${occupationTitleInput.value}_${jobTitleInput.value}_DACUM_Chart.pdf`);
+        showStatus('PDF exported successfully! ✓', 'success');
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        showStatus('Error generating PDF: ' + error.message, 'error');
+    }
+}
+
+
+        // Check if docx library loaded successfully
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (typeof window.docx === 'undefined') {
+                    console.error('Warning: docx library failed to load');
+                } else {
+                    console.log('docx library loaded successfully');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

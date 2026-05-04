@@ -317,11 +317,43 @@
                 <p class="tool-description">Develop comprehensive curriculum charts for any occupation with duties, tasks, and related competencies.</p>
                 <button class="tool-button">Open Tool →</button>
             </div>
+
+            <!-- Link to QR Converter Card -->
+            <div class="tool-card" onclick="openTool('qrconverter')">
+                <div class="tool-icon">🔗</div>
+                <h2 class="tool-title">Link to QR Converter</h2>
+                <p class="tool-description">Convert any URL or text into a QR code instantly. Download high-quality QR codes for printing and sharing.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- Result Based Project Proposal Card -->
+            <div class="tool-card" onclick="openTool('rbmproposal')">
+                <div class="tool-icon">📝</div>
+                <h2 class="tool-title">RBM Project Proposal Tool</h2>
+                <p class="tool-description">Create results-based management project proposals with logical frameworks, indicators, and monitoring plans.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- Training Resources Management Card -->
+            <div class="tool-card" onclick="openTool('trainingresources')">
+                <div class="tool-icon">📚</div>
+                <h2 class="tool-title">Training Resources Management</h2>
+                <p class="tool-description">Organize and manage training materials, resources, and documentation efficiently in one central location.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
+
+            <!-- Screen Recorder Card -->
+            <div class="tool-card" onclick="openTool('screenrecorder')">
+                <div class="tool-icon">🎥</div>
+                <h2 class="tool-title">Screen Recorder</h2>
+                <p class="tool-description">Record your screen, webcam, or both for creating training videos, demonstrations, and tutorials.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
         </div>
 
         <div class="footer">
-            <p class="copyright">&copy; 2025 Husham Jawad. All rights reserved.</p>
-            <p class="version">TVET Engineering Tools - Master Interface v3.0</p>
+            <p class="copyright">&copy; 2026 Husham Jawad. All rights reserved.</p>
+            <p class="version">TVET Engineering Tools - Master Interface v4.0</p>
         </div>
     </div>
 
@@ -390,6 +422,58 @@
         <iframe id="dacumFrame" class="iframe-container"></iframe>
     </div>
 
+    <!-- Link to QR Converter View -->
+    <div class="tool-view" id="qrconverterView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="qrconverterLoading">
+            <div class="spinner"></div>
+            <p>Loading Link to QR Converter...</p>
+        </div>
+        <iframe id="qrconverterFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- RBM Project Proposal View -->
+    <div class="tool-view" id="rbmproposalView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="rbmproposalLoading">
+            <div class="spinner"></div>
+            <p>Loading RBM Project Proposal Tool...</p>
+        </div>
+        <iframe id="rbmproposalFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- Training Resources Management View -->
+    <div class="tool-view" id="trainingresourcesView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="trainingresourcesLoading">
+            <div class="spinner"></div>
+            <p>Loading Training Resources Management...</p>
+        </div>
+        <iframe id="trainingresourcesFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- Screen Recorder View -->
+    <div class="tool-view" id="screenrecorderView">
+        <button class="back-button" onclick="backToMain()">
+            <span>←</span>
+            <span>Back to Tools</span>
+        </button>
+        <div class="loading" id="screenrecorderLoading">
+            <div class="spinner"></div>
+            <p>Loading Screen Recorder...</p>
+        </div>
+        <iframe id="screenrecorderFrame" class="iframe-container"></iframe>
+    </div>
+
     <script>
         // Store the file paths
         const tools = {
@@ -397,7 +481,11 @@
             calculator: 'Training_Cost_Calculator_Final.html',
             nqf: 'NQF_world_map_V3.html',
             linkedin: 'linkedin-editor_V_0_2.html',
-            dacum: 'DACUM_Chart_Generator_V_2_0.html'
+            dacum: 'DACUM_Chart_Generator_V_2_0.html',
+            qrconverter: 'https://hshamjawad.github.io/Link-to-QR-Converter-Tool/',
+            rbmproposal: 'https://hshamjawad.github.io/rbm-project-proposal-tool/',
+            trainingresources: 'https://hshamjawad.github.io/Training-Resources-Management-Tool/',
+            screenrecorder: 'https://hshamjawad.github.io/Screen-Recorder/'
         };
 
         let currentTool = null;
@@ -441,6 +529,10 @@
             document.getElementById('nqfView').classList.remove('active');
             document.getElementById('linkedinView').classList.remove('active');
             document.getElementById('dacumView').classList.remove('active');
+            document.getElementById('qrconverterView').classList.remove('active');
+            document.getElementById('rbmproposalView').classList.remove('active');
+            document.getElementById('trainingresourcesView').classList.remove('active');
+            document.getElementById('screenrecorderView').classList.remove('active');
             
             // Show main page
             document.getElementById('mainPage').style.display = 'block';

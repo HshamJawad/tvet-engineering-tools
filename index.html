@@ -154,34 +154,61 @@
             display: block;
         }
 
-        .back-button {
+        .nav-bar {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 64px;
             z-index: 1001;
-            padding: 15px 30px;
             background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
-            display: flex;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            padding: 0 20px;
         }
 
-        .back-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.6);
+        .nav-bar.active {
+            display: flex;
+        }
+
+        .nav-btn {
+            padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .nav-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-inline-start: 10px;
         }
 
         .iframe-container {
             width: 100%;
-            height: 100vh;
+            height: calc(100vh - 64px);
+            margin-top: 64px;
             border: none;
             overflow: auto;
         }
@@ -239,6 +266,26 @@
 
             .main-container {
                 padding: 30px 20px;
+            }
+
+            .nav-bar {
+                height: 56px;
+                padding: 0 12px;
+                gap: 8px;
+            }
+
+            .nav-btn {
+                padding: 8px 16px;
+                font-size: 0.85rem;
+            }
+
+            .nav-title {
+                display: none;
+            }
+
+            .iframe-container {
+                height: calc(100vh - 56px);
+                margin-top: 56px;
             }
         }
 
@@ -349,6 +396,14 @@
                 <p class="tool-description">Record your screen, webcam, or both for creating training videos, demonstrations, and tutorials.</p>
                 <button class="tool-button">Open Tool →</button>
             </div>
+
+            <!-- Ice Breaker Games Card -->
+            <div class="tool-card" onclick="openTool('icebreaker')">
+                <div class="tool-icon">🧊</div>
+                <h2 class="tool-title">Ice Breaker Games</h2>
+                <p class="tool-description">A bilingual facilitator toolkit of ice breaker games to energize workshops and training sessions from the very first minute.</p>
+                <button class="tool-button">Open Tool →</button>
+            </div>
         </div>
 
         <div class="footer">
@@ -357,12 +412,21 @@
         </div>
     </div>
 
+    <!-- Persistent Top Navigation Bar -->
+    <div class="nav-bar" id="navBar">
+        <button class="nav-btn" id="backBtn" onclick="goBack()">
+            <span>←</span>
+            <span>Back</span>
+        </button>
+        <button class="nav-btn" id="forwardBtn" onclick="goForward()">
+            <span>Forward</span>
+            <span>→</span>
+        </button>
+        <span class="nav-title" id="navTitle"></span>
+    </div>
+
     <!-- Workshop Agenda Manager View -->
     <div class="tool-view" id="workshopView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="workshopLoading">
             <div class="spinner"></div>
             <p>Loading Workshop Agenda Manager...</p>
@@ -372,10 +436,6 @@
 
     <!-- Training Cost Calculator View -->
     <div class="tool-view" id="calculatorView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="calculatorLoading">
             <div class="spinner"></div>
             <p>Loading Training Cost Calculator...</p>
@@ -385,10 +445,6 @@
 
     <!-- National Qualification Framework View -->
     <div class="tool-view" id="nqfView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="nqfLoading">
             <div class="spinner"></div>
             <p>Loading National Qualification Framework Map...</p>
@@ -398,10 +454,6 @@
 
     <!-- LinkedIn Post Editor View -->
     <div class="tool-view" id="linkedinView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="linkedinLoading">
             <div class="spinner"></div>
             <p>Loading LinkedIn Post Editor...</p>
@@ -411,10 +463,6 @@
 
     <!-- DACUM Chart Generator View -->
     <div class="tool-view" id="dacumView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="dacumLoading">
             <div class="spinner"></div>
             <p>Loading DACUM Chart Generator...</p>
@@ -424,10 +472,6 @@
 
     <!-- Link to QR Converter View -->
     <div class="tool-view" id="qrconverterView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="qrconverterLoading">
             <div class="spinner"></div>
             <p>Loading Link to QR Converter...</p>
@@ -437,10 +481,6 @@
 
     <!-- RBM Project Proposal View -->
     <div class="tool-view" id="rbmproposalView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="rbmproposalLoading">
             <div class="spinner"></div>
             <p>Loading RBM Project Proposal Tool...</p>
@@ -450,10 +490,6 @@
 
     <!-- Training Resources Management View -->
     <div class="tool-view" id="trainingresourcesView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="trainingresourcesLoading">
             <div class="spinner"></div>
             <p>Loading Training Resources Management...</p>
@@ -463,15 +499,20 @@
 
     <!-- Screen Recorder View -->
     <div class="tool-view" id="screenrecorderView">
-        <button class="back-button" onclick="backToMain()">
-            <span>←</span>
-            <span>Back to Tools</span>
-        </button>
         <div class="loading" id="screenrecorderLoading">
             <div class="spinner"></div>
             <p>Loading Screen Recorder...</p>
         </div>
         <iframe id="screenrecorderFrame" class="iframe-container"></iframe>
+    </div>
+
+    <!-- Ice Breaker Games View -->
+    <div class="tool-view" id="icebreakerView">
+        <div class="loading" id="icebreakerLoading">
+            <div class="spinner"></div>
+            <p>Loading Ice Breaker Games...</p>
+        </div>
+        <iframe id="icebreakerFrame" class="iframe-container"></iframe>
     </div>
 
     <script>
@@ -485,71 +526,118 @@
             qrconverter: 'https://hshamjawad.github.io/Link-to-QR-Converter-Tool/',
             rbmproposal: 'https://hshamjawad.github.io/rbm-project-proposal-tool/',
             trainingresources: 'https://hshamjawad.github.io/Training-Resources-Management-Tool/',
-            screenrecorder: 'https://hshamjawad.github.io/Screen-Recorder/'
+            screenrecorder: 'https://hshamjawad.github.io/Screen-Recorder/',
+            icebreaker: 'Ice_breaker_games.html'
         };
 
-        let currentTool = null;
+        // Display titles shown in the top navigation bar
+        const toolTitles = {
+            workshop: 'Workshop Agenda Manager',
+            calculator: 'Training Cost Calculator',
+            nqf: 'National Qualification Framework',
+            linkedin: 'LinkedIn Post Editor',
+            dacum: 'DACUM Chart Generator',
+            qrconverter: 'Link to QR Converter',
+            rbmproposal: 'RBM Project Proposal Tool',
+            trainingresources: 'Training Resources Management',
+            screenrecorder: 'Screen Recorder',
+            icebreaker: 'Ice Breaker Games'
+        };
+
+        const allToolNames = Object.keys(tools);
+
+        // Navigation history stack. Each entry is either 'main' or a tool name.
+        let navHistory = ['main'];
+        let navIndex = 0;
+
+        function hideAllViews() {
+            document.getElementById('mainPage').style.display = 'none';
+            allToolNames.forEach(function (name) {
+                document.getElementById(name + 'View').classList.remove('active');
+            });
+        }
+
+        function renderCurrentState() {
+            const state = navHistory[navIndex];
+            const navBar = document.getElementById('navBar');
+
+            hideAllViews();
+
+            if (state === 'main') {
+                document.getElementById('mainPage').style.display = 'block';
+                navBar.classList.remove('active');
+                document.getElementById('navTitle').textContent = '';
+            } else {
+                const viewId = state + 'View';
+                const frameId = state + 'Frame';
+                const loadingId = state + 'Loading';
+
+                const toolView = document.getElementById(viewId);
+                const iframe = document.getElementById(frameId);
+                const loading = document.getElementById(loadingId);
+
+                toolView.classList.add('active');
+                navBar.classList.add('active');
+                document.getElementById('navTitle').textContent = toolTitles[state] || '';
+
+                if (!iframe.src) {
+                    loading.classList.add('active');
+                    iframe.src = tools[state];
+                    iframe.onload = function () {
+                        loading.classList.remove('active');
+                    };
+                } else {
+                    loading.classList.remove('active');
+                }
+            }
+
+            document.getElementById('backBtn').disabled = navIndex === 0;
+            document.getElementById('forwardBtn').disabled = navIndex === navHistory.length - 1;
+        }
 
         function openTool(toolName) {
-            currentTool = toolName;
-            
-            // Hide main page
-            document.getElementById('mainPage').style.display = 'none';
-            
-            // Show the selected tool view
-            const viewId = toolName + 'View';
-            const frameId = toolName + 'Frame';
-            const loadingId = toolName + 'Loading';
-            
-            const toolView = document.getElementById(viewId);
-            const iframe = document.getElementById(frameId);
-            const loading = document.getElementById(loadingId);
-            
-            // Show loading
-            loading.classList.add('active');
-            toolView.classList.add('active');
-            
-            // Load the iframe
-            if (!iframe.src) {
-                iframe.src = tools[toolName];
-                
-                // Hide loading when iframe loads
-                iframe.onload = function() {
-                    loading.classList.remove('active');
-                };
-            } else {
-                loading.classList.remove('active');
+            // If we're navigating to a tool we're not already on, push a new history entry
+            if (navHistory[navIndex] !== toolName) {
+                navHistory = navHistory.slice(0, navIndex + 1);
+                navHistory.push(toolName);
+                navIndex = navHistory.length - 1;
             }
+            renderCurrentState();
         }
 
         function backToMain() {
-            // Hide all tool views
-            document.getElementById('workshopView').classList.remove('active');
-            document.getElementById('calculatorView').classList.remove('active');
-            document.getElementById('nqfView').classList.remove('active');
-            document.getElementById('linkedinView').classList.remove('active');
-            document.getElementById('dacumView').classList.remove('active');
-            document.getElementById('qrconverterView').classList.remove('active');
-            document.getElementById('rbmproposalView').classList.remove('active');
-            document.getElementById('trainingresourcesView').classList.remove('active');
-            document.getElementById('screenrecorderView').classList.remove('active');
-            
-            // Show main page
-            document.getElementById('mainPage').style.display = 'block';
-            
-            currentTool = null;
+            if (navHistory[navIndex] !== 'main') {
+                navHistory = navHistory.slice(0, navIndex + 1);
+                navHistory.push('main');
+                navIndex = navHistory.length - 1;
+            }
+            renderCurrentState();
         }
 
-        // Keyboard shortcut - ESC to go back
+        function goBack() {
+            if (navIndex > 0) {
+                navIndex--;
+                renderCurrentState();
+            }
+        }
+
+        function goForward() {
+            if (navIndex < navHistory.length - 1) {
+                navIndex++;
+                renderCurrentState();
+            }
+        }
+
+        // Keyboard shortcut - ESC to go back to main
         document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && currentTool) {
+            if (event.key === 'Escape' && navHistory[navIndex] !== 'main') {
                 backToMain();
             }
         });
 
         // Prevent accidental navigation away
         window.addEventListener('beforeunload', function(e) {
-            if (currentTool) {
+            if (navHistory[navIndex] !== 'main') {
                 e.preventDefault();
                 e.returnValue = '';
             }

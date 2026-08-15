@@ -169,6 +169,77 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        .link-chooser-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 20000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .link-chooser-overlay.show {
+            display: flex;
+        }
+
+        .link-chooser-box {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+
+        .link-chooser-box h3 {
+            color: #fff;
+            margin: 0 0 0.3rem 0;
+            font-size: 1.15em;
+        }
+
+        .link-chooser-sub {
+            color: #aaa;
+            font-size: 0.85em;
+            margin-bottom: 1rem;
+        }
+
+        .lc-link-item {
+            display: block;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 0.7rem 1rem;
+            margin-bottom: 0.6rem;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.92em;
+            transition: all 0.2s ease;
+        }
+
+        .lc-link-item:hover {
+            background: rgba(0,100,0,0.2);
+            border-color: #006400;
+        }
+
+        .lc-close-btn {
+            display: block;
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.6rem;
+            background: transparent;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .lc-close-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
         @keyframes bounce {
             0%, 100% {
                 transform: translateY(0);
@@ -321,9 +392,10 @@
                 <div style="border-left: 2px solid #ccc; height: 30px;"></div>
                 <div class="zoom-control" style="gap: 8px;">
                     <label for="countryDropdown" style="font-weight: bold; color: #2c3e50;">Select Country:</label>
-                    <select id="countryDropdown" style="padding: 8px 12px; border-radius: 5px; border: 2px solid #2c3e50; font-size: 0.95em; cursor: pointer;">
-                        <option value="">-- Choose a Country --</option>
-                    </select>
+                    <input type="text" id="countryDropdown" list="countryListOptions" autocomplete="off"
+                        placeholder="Type a country name..."
+                        style="padding: 8px 12px; border-radius: 5px; border: 2px solid #2c3e50; font-size: 0.95em; min-width: 220px;">
+                    <datalist id="countryListOptions"></datalist>
                     <button id="visitNQFBtn" style="padding: 8px 16px; background: #5a8ba8; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: none; transition: background 0.3s;">
                         Visit NQF Website
                     </button>
@@ -362,6 +434,15 @@
 
     <div class="no-nqf-toast" id="noNqfToast">No NQF link available for this country at the moment</div>
 
+    <div class="link-chooser-overlay" id="linkChooserModal">
+        <div class="link-chooser-box">
+            <h3 id="lcCountryName"></h3>
+            <div class="link-chooser-sub">Multiple sources are available for this country. Choose one:</div>
+            <div id="lcLinks"></div>
+            <button class="lc-close-btn" id="lcCloseBtn">Close</button>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
     <script>
@@ -378,7 +459,9 @@
             'Ivory Coast': 'Ivory Coast',
             'Dem. Rep. Congo': 'Democratic Republic of the Congo',
             'Democratic Republic of the Congo': 'Democratic Republic of the Congo',
-            'Congo DRC': 'Democratic Republic of the Congo'
+            'Congo DRC': 'Democratic Republic of the Congo',
+            'Congo': 'Republic of the Congo',
+            'Rep. of the Congo': 'Republic of the Congo'
         };
 
         // NQF data for countries - UPDATED with all countries
@@ -424,7 +507,10 @@
             'Oman': { url: 'https://www.squ.edu.om/qao/DEPARTMENTS/Academic-Programs-and-Community-Service/Oman-Qualification-Framework-OQF' },
             'Austria': { url: 'https://www.qualifikationsregister.at/en/' },
             'Azerbaijan': { url: 'https://e-qanun.az/framework/39622' },
-            'Belgium': { url: 'https://vlaamsekwalificatiestructuur.be/en/' },
+            'Belgium': { urls: [
+                { label: 'Flemish Qualifications Structure (Flanders)', url: 'https://vlaamsekwalificatiestructuur.be/en/' },
+                { label: 'Cadre francophone des certifications (Wallonia)', url: 'https://cfc.cfwb.be/' }
+            ] },
             'Bhutan': { url: 'http://www.dahe.gov.bt/images/pdf/Bhutan%20Qualifications%20Framework%20Inside%20Content.pdf' },
             'Botswana': { url: 'https://www.bqa.org.bw/registered-qualifications' },
             'Bulgaria': { url: 'https://www.mon.bg/' },
@@ -502,7 +588,99 @@
             'Myanmar': { url: 'https://moe.gov.mm/content/national-qualifications-framework-nqf' },
             'Vietnam': { url: 'https://moet.gov.vn/giaoducquocdan/giao-duc-dai-hoc/Pages/default.aspx?ItemID=6681' },
             'Russia': { url: 'https://nark.ru/' },
-            'Costa Rica': { url: 'https://www.sinaes.ac.cr/el-marco-nacional-de-cualificaciones-para-las-carreras-de-educacion-en-costa-rica-una-iniciativa-interinstitucional-que-promueve-la-calidad-educativa/' }
+            'Costa Rica': { url: 'https://www.sinaes.ac.cr/el-marco-nacional-de-cualificaciones-para-las-carreras-de-educacion-en-costa-rica-una-iniciativa-interinstitucional-que-promueve-la-calidad-educativa/' },
+
+            // ===== Priority 1: previously unresolved countries =====
+            'Suriname': { url: 'http://www.suriname-nta.org/over-ons' },
+            'Venezuela': { url: 'https://inces.gob.ve/' },
+            'Gabon': { urls: [
+                { label: 'UNESCO-UNEVOC TVET Country Profile', url: 'https://unevoc.unesco.org/home/Dynamic+TVET+Country+Profiles/country=GAB' },
+                { label: 'Ministry of National Education (Gabon)', url: 'https://www.education-nationale.gouv.ga/' }
+            ] },
+            'Republic of the Congo': { urls: [
+                { label: 'Ministry of Technical and Vocational Education (Official)', url: 'https://www.enseignement-technique.gouv.cg/' },
+                { label: 'UNESCO-UNEVOC TVET Country Profile', url: 'https://unevoc.unesco.org/home/Dynamic+TVET+Country+Profiles/country=COG' }
+            ] },
+            'Turkmenistan': { url: 'https://www.etf.europa.eu/en/where-we-work/countries/turkmenistan' },
+            'Iran': { urls: [
+                { label: 'UNESCO-UNEVOC TVET Country Profile', url: 'https://unevoc.unesco.org/home/Dynamic+TVET+Country+Profiles/country=IRN' },
+                { label: 'Iran Technical and Vocational Training Organization', url: 'https://www.irantvto.ir/' }
+            ] },
+            'Laos': { url: 'https://deqa.edu.la/en/aqrf/' },
+            'Guatemala': { url: 'https://www.oitcinterfor.org/instituci%C3%B3n-miembro/instituto-t%C3%A9cnico-capacitaci%C3%B3n-productividad-intecap' },
+            'Honduras': { urls: [
+                { label: 'ILO/Cinterfor \u2014 Marco Nacional de Cualificaciones EFTP', url: 'https://www.oitcinterfor.org/sites/default/files/file_publicacion/Documento-MNC-EFTPH.pdf' },
+                { label: 'Official EFTP Portal (UNAH)', url: 'https://daft.unah.edu.hn/eftp/' }
+            ] },
+            'Nicaragua': { url: 'https://www.tecnacional.edu.ni/' },
+            'Panama': { urls: [
+                { label: 'ILO/Cinterfor \u2014 MNC Resource Hub', url: 'https://www.oitcinterfor.org/recursos/mnc' },
+                { label: 'ILO/Cinterfor \u2014 MNC Document', url: 'https://www.oitcinterfor.org/sites/default/files/file_publicacion/Marco_MNC_seg.pdf' }
+            ] },
+
+            // ===== Priority 2: Africa =====
+            'Benin': { url: 'https://en.unesco.org/news/strengthening-technical-and-vocational-education-and-training-benin' },
+            'Burkina Faso': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Burundi': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Cape Verde': { url: 'https://snq.cv/quadro-nacional-de-qualificacoes/' },
+            'Central African Republic': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Chad': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Comoros': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Eswatini': { url: 'http://www.shec.org.sz/Eswatini%20Qualifications%20Framework%202020%20SADC.pdf' },
+            'Gambia': { url: 'https://naqaa.gm/' },
+            'Guinea': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Guinea-Bissau': { url: 'https://open.enabel.be/en/update/id/2353' },
+            'Liberia': { url: 'https://www.taicep.org/taiceporgwp/wp-content/uploads/2022/12/Global-Directory-of-National-Qualification-Frameworks-FINAL-10-December-2022-1.pdf' },
+            'Madagascar': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Mali': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Niger': { url: 'http://www.mept.gouv.ne/' },
+            'Sao Tome and Principe': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'Sierra Leone': { url: 'https://www.etf.europa.eu/sites/default/files/2020-10/session_3_sierra_leone_7th_plw_29oct.pdf' },
+            'Somalia': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+            'South Sudan': { url: 'https://www.nepad.org/file-download/download/public/127317' },
+            'Sudan': { url: 'https://www.unesco.org/en/articles/national-qualification-framework-started-be-developed-sudan' },
+            'Togo': { url: 'https://acqf.africa/news/new-national-qualifications-frameworks-on-the-continent/' },
+
+            // ===== Priority 2: Asia =====
+            'Afghanistan': { url: 'https://www.taicep.org/taiceporgwp/wp-content/uploads/2022/12/Global-Directory-of-National-Qualification-Frameworks-FINAL-10-December-2022-1.pdf' },
+            'Armenia': { url: 'http://armenqa.am/nqfa/' },
+            'Bangladesh': { url: 'https://web.archive.org/web/20210817035728/https://www.iiuc.ac.bd/assets/files/BNQF-Bangladesh-2021.pdf' },
+            'Belarus': { url: 'https://edustandart.by/' },
+            'Brunei': { url: 'https://bdnac.moe.gov.bn/' },
+            'Cambodia': { url: 'https://asean.org/wp-content/uploads/2017/03/ED-02-ASEAN-Qualifications-Reference-Framework-January-2016.pdf' },
+            'Israel': { url: 'https://www.etf.europa.eu/sites/default/files/2021-05/israel.pdf' },
+            'Kuwait': { url: 'https://unevoc.unesco.org/home/Dynamic+TVET+Country+Profiles/country=KWT' },
+            'Maldives': { url: 'https://mqa.gov.mv/en/about-mnqf' },
+            'Mongolia': { url: 'https://unevoc.unesco.org/pub/tvet_country_profile_-_mongolia.pdf' },
+            'North Korea': { url: 'https://www.taicep.org/taiceporgwp/wp-content/uploads/2022/12/Global-Directory-of-National-Qualification-Frameworks-FINAL-10-December-2022-1.pdf' },
+            'Palestine': { url: 'https://www.taicep.org/taiceporgwp/wp-content/uploads/2022/12/Global-Directory-of-National-Qualification-Frameworks-FINAL-10-December-2022-1.pdf' },
+            'Taiwan': { url: 'https://www.taicep.org/taiceporgwp/wp-content/uploads/2022/12/Global-Directory-of-National-Qualification-Frameworks-FINAL-10-December-2022-1.pdf' },
+            'United Arab Emirates': { url: 'http://www.qualifications.ae/Qualifications_Framework' },
+            'Yemen': { url: 'https://unevoc.unesco.org/wtdb/worldtvetdatabase_yem_en.pdf' },
+
+            // ===== Priority 2: Europe =====
+            'Andorra': { url: 'https://www.ensenyamentsuperior.ad/' },
+            'San Marino': { url: 'https://www.enic-naric.net/page-San-Marino' },
+
+            // ===== Priority 2: Americas =====
+            'Antigua and Barbuda': { url: 'https://caricom.org/wp-content/uploads/Final-CQF-for-Member-States.pdf' },
+            'Bahamas': { url: 'https://caricom.org/wp-content/uploads/Final-CQF-for-Member-States.pdf' },
+            'Barbados': { url: 'http://technicalcouncil.com/files/barbadose_qf.pdf' },
+            'Belize': { url: 'https://caricom.org/wp-content/uploads/Final-CQF-for-Member-States.pdf' },
+            'Cuba': { url: 'https://www.taicep.org/taiceporgwp/wp-content/uploads/2022/12/Global-Directory-of-National-Qualification-Frameworks-FINAL-10-December-2022-1.pdf' },
+            'Dominican Republic': { url: 'https://ieet.org.do/proyectos-de-politicas-publicas/marco-nacional-de-cualificaciones/' },
+            'El Salvador': { url: 'https://www.oitcinterfor.org/sites/default/files/file_publicacion/Analytical%20inventory%20MNC.pdf' },
+            'Haiti': { url: 'https://caricom.org/wp-content/uploads/Final-CQF-for-Member-States.pdf' },
+            'Uruguay': { url: 'https://www.inefop.uy/' },
+
+            // ===== Priority 2: Oceania =====
+            'Vanuatu': { url: 'https://vqa.edu.vu/' },
+            'Kiribati': { url: 'https://eqap.spc.int/pacific-qualifications-framework' },
+            'Nauru': { url: 'https://eqap.spc.int/pacific-qualifications-framework' },
+            'Tuvalu': { url: 'https://eqap.spc.int/pacific-qualifications-framework' },
+            'Marshall Islands': { url: 'https://eqap.spc.int/pacific-qualifications-framework' },
+            'Micronesia': { url: 'https://eqap.spc.int/pacific-qualifications-framework' },
+            'Palau': { url: 'https://eqap.spc.int/pacific-qualifications-framework' }
         };
 
         const tooltip = document.getElementById('tooltip');
@@ -519,24 +697,84 @@
                 noNqfToast.classList.remove('show');
             }, 2500);
         }
+
+        // Returns a normalized list of {label, url} for a country's data entry,
+        // regardless of whether it uses the legacy single-url shape or the new multi-url shape.
+        function getLinksForEntry(nqf) {
+            if (!nqf) return [];
+            if (Array.isArray(nqf.urls) && nqf.urls.length > 0) return nqf.urls;
+            if (nqf.url) return [{ label: 'Official / reference source', url: nqf.url }];
+            return [];
+        }
+
+        const linkChooserModal = document.getElementById('linkChooserModal');
+        const lcCountryName = document.getElementById('lcCountryName');
+        const lcLinks = document.getElementById('lcLinks');
+        const lcCloseBtn = document.getElementById('lcCloseBtn');
+
+        function showLinkChooser(countryName, links) {
+            lcCountryName.textContent = countryName;
+            lcLinks.innerHTML = '';
+            links.forEach(item => {
+                const a = document.createElement('a');
+                a.href = item.url;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.className = 'lc-link-item';
+                a.textContent = item.label;
+                lcLinks.appendChild(a);
+            });
+            linkChooserModal.classList.add('show');
+        }
+
+        function closeLinkChooser() {
+            linkChooserModal.classList.remove('show');
+        }
+
+        lcCloseBtn.addEventListener('click', closeLinkChooser);
+        linkChooserModal.addEventListener('click', function(e) {
+            if (e.target === linkChooserModal) closeLinkChooser();
+        });
+
+        // Handles a click on a country (from the map or from the search marker):
+        // opens directly if there is exactly one link, otherwise shows the chooser.
+        function handleCountryActivation(countryName, nqf) {
+            const links = getLinksForEntry(nqf);
+            if (links.length === 0) {
+                showNoNqfToast(countryName);
+            } else if (links.length === 1) {
+                window.open(links[0].url, '_blank');
+            } else {
+                showLinkChooser(countryName, links);
+            }
+        }
         const zoomSlider = document.getElementById('zoomSlider');
         const zoomValue = document.getElementById('zoomValue');
         const countryCount = document.getElementById('countryCount');
         const countryDropdown = document.getElementById('countryDropdown');
+        const countryListOptions = document.getElementById('countryListOptions');
         const visitNQFBtn = document.getElementById('visitNQFBtn');
 
         // Count and display the number of countries
         const totalCountries = Object.keys(nqfData).length;
         countryCount.textContent = totalCountries;
 
-        // Populate dropdown with sorted country names
+        // Populate datalist with sorted country names (enables native letter-by-letter filtering as the user types)
         const sortedCountries = Object.keys(nqfData).sort();
         sortedCountries.forEach(country => {
             const option = document.createElement('option');
             option.value = country;
-            option.textContent = country;
-            countryDropdown.appendChild(option);
+            countryListOptions.appendChild(option);
         });
+
+        // Resolve whatever the user typed to an exact, case-insensitive match against nqfData's country names
+        function resolveTypedCountry(typedValue) {
+            if (!typedValue) return '';
+            const exact = sortedCountries.find(c => c === typedValue);
+            if (exact) return exact;
+            const ci = sortedCountries.find(c => c.toLowerCase() === typedValue.toLowerCase());
+            return ci || '';
+        }
 
         // Set up SVG
         const width = 1400;
@@ -584,11 +822,12 @@
                     const countryName = d.properties.name;
                     const mappedName = countryNameMap[countryName] || countryName;
                     const nqf = nqfData[mappedName];
+                    const links = getLinksForEntry(nqf);
 
                     tooltipCountry.textContent = mappedName;
-                    tooltipInfo.textContent = nqf
-                        ? "Click to visit NQF website"
-                        : "No NQF information available yet";
+                    tooltipInfo.textContent = links.length > 1
+                        ? "Multiple sources available \u2014 click to choose"
+                        : (links.length === 1 ? "Click to visit NQF website" : "No NQF information available yet");
                     tooltip.classList.add('show');
                 })
                 .on("mousemove", function(event) {
@@ -603,12 +842,7 @@
                     const countryName = d.properties.name;
                     const mappedName = countryNameMap[countryName] || countryName;
                     const nqf = nqfData[mappedName];
-                    
-                    if (nqf && nqf.url) {
-                        window.open(nqf.url, '_blank');
-                    } else {
-                        showNoNqfToast(mappedName);
-                    }
+                    handleCountryActivation(mappedName, nqf);
                 });
 
             // Function to update marker positions
@@ -642,9 +876,7 @@
                     
                     const nqf = nqfData[selectedCountry];
                     const openLink = () => {
-                        if (nqf && nqf.url) {
-                            window.open(nqf.url, '_blank');
-                        }
+                        handleCountryActivation(selectedCountry, nqf);
                     };
 
                     // Add pulsing circle - always show for selected country, clickable
@@ -668,13 +900,13 @@
             }
 
             // Dropdown country selection functionality
-            countryDropdown.addEventListener('change', function() {
-                const selectedCountry = this.value;
+            function applyCountrySelection(selectedCountry) {
                 const markerContainer = document.getElementById('markerContainer');
                 
                 // Remove existing markers
                 markerContainer.innerHTML = '';
                 visitNQFBtn.style.display = 'none';
+                tooltip.classList.remove('show');
                 
                 // Reset all countries
                 d3.selectAll(".country").style("filter", null).style("fill", d => {
@@ -700,14 +932,18 @@
                     // Show tooltip for selected country
                     const nqf = nqfData[selectedCountry];
                     if (nqf) {
+                        const links = getLinksForEntry(nqf);
                         tooltipCountry.textContent = selectedCountry;
-                        tooltipInfo.textContent = "Click to visit NQF website";
+                        tooltipInfo.textContent = links.length > 1
+                            ? "Multiple sources available \u2014 click to choose"
+                            : "Click to visit NQF website";
                         tooltip.classList.add('show');
                         
                         // Show the visit button
                         visitNQFBtn.style.display = 'inline-block';
+                        visitNQFBtn.textContent = links.length > 1 ? 'View Sources' : 'Visit NQF Website';
                         visitNQFBtn.onclick = function() {
-                            window.open(nqf.url, '_blank');
+                            handleCountryActivation(selectedCountry, nqf);
                         };
                         
                         // Add hover effect to button
@@ -718,6 +954,48 @@
                             this.style.background = '#5a8ba8';
                         };
                     }
+                }
+            }
+
+            // Fully clears the current selection: marker, highlight, tooltip, button, and the input field itself.
+            function clearCountrySelection() {
+                countryDropdown.value = '';
+                applyCountrySelection('');
+                closeLinkChooser();
+            }
+
+            // Fires as the user types or picks a suggestion from the datalist; only acts once the
+            // typed text resolves to a real country name, so partial typing doesn't flicker the map.
+            countryDropdown.addEventListener('input', function() {
+                const resolved = resolveTypedCountry(this.value);
+                if (resolved) {
+                    countryDropdown.value = resolved;
+                    applyCountrySelection(resolved);
+                } else if (this.value === '') {
+                    applyCountrySelection('');
+                }
+            });
+
+            // Escape key dismisses the current selection/marker from anywhere on the page.
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (linkChooserModal.classList.contains('show')) {
+                        closeLinkChooser();
+                    } else {
+                        clearCountrySelection();
+                        countryDropdown.blur();
+                    }
+                }
+            });
+
+            // Clicking anywhere outside the map and outside the country search field dismisses the marker.
+            document.addEventListener('click', function(e) {
+                const mapWrapperEl = document.getElementById('mapWrapper');
+                const clickedInsideMap = mapWrapperEl && mapWrapperEl.contains(e.target);
+                const clickedInsideControls = e.target === countryDropdown || e.target === visitNQFBtn || e.target.closest('.controls');
+                const clickedInsideModal = e.target.closest('.link-chooser-box');
+                if (!clickedInsideMap && !clickedInsideControls && !clickedInsideModal) {
+                    clearCountrySelection();
                 }
             });
 

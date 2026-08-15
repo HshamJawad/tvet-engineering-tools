@@ -97,10 +97,10 @@
         }
 
         .country:hover {
-            fill: #e74c3c !important;
-            stroke: #c0392b;
+            fill: #f39c12 !important;
+            stroke: #d68910;
             stroke-width: 1.5;
-            filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.8));
+            filter: drop-shadow(0 0 8px rgba(243, 156, 18, 0.8));
         }
 
         .highlight-marker {
@@ -116,7 +116,8 @@
             border: 3px solid #e74c3c;
             border-radius: 50%;
             position: absolute;
-            pointer-events: none;
+            pointer-events: auto;
+            cursor: pointer;
             z-index: 9998;
             animation: pulse 1.5s ease-in-out infinite;
         }
@@ -140,9 +141,32 @@
             border-right: 15px solid transparent;
             border-top: 25px solid #e74c3c;
             position: absolute;
-            pointer-events: none;
+            pointer-events: auto;
+            cursor: pointer;
             z-index: 9998;
             animation: bounce 1s ease-in-out infinite;
+        }
+
+        .no-nqf-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #2c3e50;
+            color: #fff;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .no-nqf-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
 
         @keyframes bounce {
@@ -327,7 +351,7 @@
         </div>
 
         <footer>
-            <p>&copy; 2025 National Qualification Frameworks World Map | By Husham Jawad | Click countries to visit official NQF websites</p>
+            <p>&copy; 2026 National Qualification Frameworks World Map | By Husham Jawad | Click countries to visit official NQF websites</p>
         </footer>
     </div>
 
@@ -335,6 +359,8 @@
         <div class="tooltip-country" id="tooltipCountry"></div>
         <div class="tooltip-info" id="tooltipInfo">Click to visit NQF website</div>
     </div>
+
+    <div class="no-nqf-toast" id="noNqfToast">No NQF link available for this country at the moment</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -346,7 +372,13 @@
             'Macao S.A.R': 'Macao',
             'N. Cyprus': 'Cyprus',
             'Republic of Singapore': 'Singapore',
-            'Rep. of Singapore': 'Singapore'
+            'Rep. of Singapore': 'Singapore',
+            'Czechia': 'Czech Republic',
+            "Côte d'Ivoire": 'Ivory Coast',
+            'Ivory Coast': 'Ivory Coast',
+            'Dem. Rep. Congo': 'Democratic Republic of the Congo',
+            'Democratic Republic of the Congo': 'Democratic Republic of the Congo',
+            'Congo DRC': 'Democratic Republic of the Congo'
         };
 
         // NQF data for countries - UPDATED with all countries
@@ -354,18 +386,18 @@
             'United States of America': { url: 'https://www.nqfconnect.org/' },
             'Canada': { url: 'https://www.cicic.ca/1374/qualifications_frameworks.canada' },
             'Mexico': { url: 'https://uil.unesco.org/fileadmin/keydocuments/LifelongLearning/en/Mexico.pdf' },
-            'Brazil': { url: 'http://portal.mec.gov.br/' },
+            'Brazil': { url: 'https://www.gov.br/mec/pt-br' },
             'Argentina': { url: 'https://www.argentina.gob.ar/educacion' },
             'United Kingdom': { url: 'https://www.gov.uk/what-different-qualification-levels-mean' },
             'France': { url: 'https://www.service-public.gouv.fr/particuliers/vosdroits/F199' },
             'Germany': { url: 'https://www.dqr.de/dqr/en/the-dqr/deutscher-qualifikationsrahmen-the-dqr.html' },
             'Spain': { url: 'https://eurydice.eacea.ec.europa.eu/eurypedia/spain/national-qualifications-framework' },
-            'Italy': { url: 'https://www.miur.gov.it/' },
+            'Italy': { url: 'https://www.mim.gov.it/en/how-to-have-a-professional-qualification-recognised-in-italy' },
             'Netherlands': { url: 'https://nlqf.nl/english-information/' },
             'Ireland': { url: 'https://www.qqi.ie/' },
             'Turkey': { url: 'https://www.myk.gov.tr/' },
             'South Africa': { url: 'https://www.saqa.org.za/' },
-            'Egypt': { url: 'http://naqaae.eg/' },
+            'Egypt': { url: 'https://moe.gov.eg/en' },
             'Nigeria': { url: 'https://web.nbte.gov.ng/' },
             'China': { url: 'http://en.moe.gov.cn/' },
             'India': { url: 'https://www.nqr.gov.in/' },
@@ -411,7 +443,7 @@
             'Jordan': { url: 'https://jnqf.heac.org.jo/' },
             'Kazakhstan': { url: 'https://www.etf.europa.eu/sites/default/files/2021-05/kazakhstan.pdf' },
             'Kosovo': { url: 'https://www.etf.europa.eu/sites/default/files/2023-05/Kosovo%202023.pdf' },
-            'Kyrgyzstan': { url: 'https://www.etf.europa.eu/sites/default/files/2021-07/kyrgyzstan_0.pdf' },
+            'Kyrgyzstan': { url: 'https://www.etf.europa.eu/en/where-we-work/countries/kyrgyzstan' },
             'Latvia': { url: 'https://www.latvijaskvalifikacijas.lv/' },
             'Lebanon': { url: 'https://www.etf.europa.eu/sites/default/files/2021-07/lebanon.pdf' },
             'Lesotho': { url: 'https://www.che.ac.ls/wp-content/uploads/2020/02/LQF-Final_Cabinet-Approved-Signed-1.pdf' },
@@ -432,7 +464,7 @@
             'Philippines': { url: 'https://pqf.gov.ph/' },
             'Romania': { url: 'https://cnred.edu.ro/en/education-system-in-romania-2/' },
             'Rwanda': { url: 'https://utab.ac.rw/wp-content/uploads/2021/01/RWANDAN_NATIONAL_QUALIFICATIONS_FRAMEWORK_FOR_HIGHER_EDUCATION_2.pdf' },
-            'Saint Kitts and Nevis': { url: 'https://www.thestkittsnevisobserver.com/the-skn-national-qualification-framework-launched/' },
+            'Saint Kitts and Nevis': { url: 'https://www.sknis.gov.kn/' },
             'Seychelles': { url: 'http://www.sqa.sc/images/Seychelles%20National%20Qualifications%20Framework_Final_Digital.pdf' },
             'Slovakia': { url: 'https://www.kvalifikacie.sk/' },
             'Slovenia': { url: 'https://www.nok.si/en/' },
@@ -450,12 +482,43 @@
             'Zimbabwe': { url: 'https://www.zimche.ac.zw/wp-content/uploads/2019/04/ZNQF.pdf' },
             'Chile': { url: 'https://chilevalora.gob.cl/' },
             'Trinidad and Tobago': { url: 'https://ntatnt.org/nqf/' },
-            'Singapore': { url: 'https://www.ssg.gov.sg/skills-development/workforce-skills-qualifications/' }
+            'Singapore': { url: 'https://www.ssg.gov.sg/skills-development/workforce-skills-qualifications/' },
+            'Czech Republic': { url: 'https://www.narodnikvalifikace.cz/en-us/en1' },
+            'Albania': { url: 'https://eurydice.eacea.ec.europa.eu/national-education-systems/albania/national-qualifications-framework' },
+            'Bosnia and Herzegovina': { url: 'https://www.etf.europa.eu/en/document-attachments/national-qualifications-framework-bosnia-and-herzegovina-0' },
+            'Georgia': { url: 'https://eqe.ge/en/page/parent/787/erovnuli-kvalifikatsiebis-charcho' },
+            'Ethiopia': { url: 'https://acqf.africa/' },
+            'Uganda': { url: 'https://acqf.africa/' },
+            'Senegal': { url: 'https://acqf.africa/' },
+            'Colombia': { url: 'https://cualificaciones.mintrabajo.gov.co/marco-nacional-cualificaciones' },
+            'Peru': { url: 'https://www.gob.pe/51256-marco-nacional-de-cualificaciones-del-peru-mncp' },
+            'Ecuador': { url: 'https://www.gob.ec/mt/tramites/emision-perfiles-cualificacion-profesional' },
+            'Bolivia': { url: 'https://spcc.minedu.gob.bo/' },
+            'Paraguay': { url: 'https://www.sinafocal.gov.py/' },
+            'Democratic Republic of the Congo': { url: 'https://acqf.africa/capacity-development-programme/webinars/developper-le-cadre-national-des-qualifications-et-certifications-cnqc-de-la-r-d-congo' },
+            'Cameroon': { url: 'https://acqf.africa/news/processus-de-developpement-du-cadre-national-de-certifications-et-de-qualifications-au-cameroun-en-francais-par-deodonne-kunwufine' },
+            'Ivory Coast': { url: 'https://fr.apanews.net/not-to-be-missed/rci-un-cadre-national-de-certification-pour-lemployabilite-des-jeunes/' },
+            'Tajikistan': { url: 'https://capacity4dev.europa.eu/articles/national-qualification-framework-tajikistan-learning-sharing_en' },
+            'Myanmar': { url: 'https://moe.gov.mm/content/national-qualifications-framework-nqf' },
+            'Vietnam': { url: 'https://moet.gov.vn/giaoducquocdan/giao-duc-dai-hoc/Pages/default.aspx?ItemID=6681' },
+            'Russia': { url: 'https://nark.ru/' },
+            'Costa Rica': { url: 'https://www.sinaes.ac.cr/el-marco-nacional-de-cualificaciones-para-las-carreras-de-educacion-en-costa-rica-una-iniciativa-interinstitucional-que-promueve-la-calidad-educativa/' }
         };
 
         const tooltip = document.getElementById('tooltip');
         const tooltipCountry = document.getElementById('tooltipCountry');
         const tooltipInfo = document.getElementById('tooltipInfo');
+        const noNqfToast = document.getElementById('noNqfToast');
+        let noNqfToastTimer = null;
+
+        function showNoNqfToast(countryName) {
+            noNqfToast.textContent = `No NQF link available for ${countryName} at the moment`;
+            noNqfToast.classList.add('show');
+            if (noNqfToastTimer) clearTimeout(noNqfToastTimer);
+            noNqfToastTimer = setTimeout(() => {
+                noNqfToast.classList.remove('show');
+            }, 2500);
+        }
         const zoomSlider = document.getElementById('zoomSlider');
         const zoomValue = document.getElementById('zoomValue');
         const countryCount = document.getElementById('countryCount');
@@ -521,12 +584,12 @@
                     const countryName = d.properties.name;
                     const mappedName = countryNameMap[countryName] || countryName;
                     const nqf = nqfData[mappedName];
-                    
-                    if (nqf) {
-                        tooltipCountry.textContent = mappedName;
-                        tooltipInfo.textContent = "Click to visit NQF website";
-                        tooltip.classList.add('show');
-                    }
+
+                    tooltipCountry.textContent = mappedName;
+                    tooltipInfo.textContent = nqf
+                        ? "Click to visit NQF website"
+                        : "No NQF information available yet";
+                    tooltip.classList.add('show');
                 })
                 .on("mousemove", function(event) {
                     tooltip.style.left = (event.clientX + 15) + 'px';
@@ -543,6 +606,8 @@
                     
                     if (nqf && nqf.url) {
                         window.open(nqf.url, '_blank');
+                    } else {
+                        showNoNqfToast(mappedName);
                     }
                 });
 
@@ -575,18 +640,29 @@
                     const percentX = (centerX / svg.viewBox.baseVal.width) * 100;
                     const percentY = (centerY / svg.viewBox.baseVal.height) * 100;
                     
-                    // Add pulsing circle - always show for selected country
+                    const nqf = nqfData[selectedCountry];
+                    const openLink = () => {
+                        if (nqf && nqf.url) {
+                            window.open(nqf.url, '_blank');
+                        }
+                    };
+
+                    // Add pulsing circle - always show for selected country, clickable
                     const circle = document.createElement('div');
                     circle.className = 'marker-circle';
                     circle.style.left = `calc(${percentX}% - 30px)`;
                     circle.style.top = `calc(${percentY}% - 30px)`;
+                    circle.title = `Click to visit ${selectedCountry} NQF website`;
+                    circle.addEventListener('click', openLink);
                     markerContainer.appendChild(circle);
                     
-                    // Add bouncing arrow
+                    // Add bouncing arrow, clickable
                     const arrow = document.createElement('div');
                     arrow.className = 'marker-arrow';
                     arrow.style.left = `calc(${percentX}% - 15px)`;
                     arrow.style.top = `calc(${percentY}% - 70px)`;
+                    arrow.title = `Click to visit ${selectedCountry} NQF website`;
+                    arrow.addEventListener('click', openLink);
                     markerContainer.appendChild(arrow);
                 }
             }

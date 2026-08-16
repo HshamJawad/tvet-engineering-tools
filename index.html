@@ -357,11 +357,11 @@
                 <button class="tool-button">Open Tool →</button>
             </div>
 
-            <!-- DACUM Chart Generator Card -->
+            <!-- DACUM Lite Card -->
             <div class="tool-card" onclick="openTool('dacum')">
                 <div class="tool-icon">📊</div>
-                <h2 class="tool-title">DACUM Chart Generator</h2>
-                <p class="tool-description">Develop comprehensive curriculum charts for any occupation with duties, tasks, and related competencies.</p>
+                <h2 class="tool-title">DACUM Lite</h2>
+                <p class="tool-description">Build, edit and export occupational analysis charts — duties, tasks and supporting information — in Arabic, English or French, with Word and PDF output.</p>
                 <button class="tool-button">Open Tool →</button>
             </div>
 
@@ -461,11 +461,11 @@
         <iframe id="linkedinFrame" class="iframe-container"></iframe>
     </div>
 
-    <!-- DACUM Chart Generator View -->
+    <!-- DACUM Lite View -->
     <div class="tool-view" id="dacumView">
         <div class="loading" id="dacumLoading">
             <div class="spinner"></div>
-            <p>Loading DACUM Chart Generator...</p>
+            <p>Loading DACUM Lite...</p>
         </div>
         <iframe id="dacumFrame" class="iframe-container"></iframe>
     </div>
@@ -522,7 +522,10 @@
             calculator: 'Training_Cost_Calculator_Final.html',
             nqf: 'NQF_world_map_V3.html',
             linkedin: 'linkedin-editor_V_0_2.html',
-            dacum: 'DACUM_Chart_Generator_V_2_0.html',
+            // DACUM Lite now lives in its own repository. The old
+            // DACUM_Chart_Generator_V_2_0.html file has been deleted, so this
+            // must stay an absolute URL — a relative path would 404.
+            dacum: 'https://hshamjawad.github.io/DACUM-Lite/app/index.html',
             qrconverter: 'https://hshamjawad.github.io/Link-to-QR-Converter-Tool/',
             rbmproposal: 'https://hshamjawad.github.io/rbm-project-proposal-tool/',
             trainingresources: 'https://hshamjawad.github.io/Training-Resources-Management-Tool/',
@@ -536,7 +539,7 @@
             calculator: 'Training Cost Calculator',
             nqf: 'National Qualification Framework',
             linkedin: 'LinkedIn Post Editor',
-            dacum: 'DACUM Chart Generator',
+            dacum: 'DACUM Lite',
             qrconverter: 'Link to QR Converter',
             rbmproposal: 'RBM Project Proposal Tool',
             trainingresources: 'Training Resources Management',

@@ -154,43 +154,75 @@
             display: block;
         }
 
+        /* ---------- Floating navigation overlay ---------- */
         .nav-bar {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 64px;
-            z-index: 1001;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            top: 12px;
+            inset-inline-start: 12px;
+            z-index: 1002;
+            height: 48px;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.92), rgba(118, 75, 162, 0.92));
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 50px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
             display: none;
             align-items: center;
-            gap: 12px;
-            padding: 0 20px;
+            gap: 6px;
+            padding: 0 10px;
+            max-width: calc(100% - 24px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
         .nav-bar.active {
             display: flex;
         }
 
+        /* Faded while the user works inside the tool; wakes up on hover */
+        .nav-bar.dimmed {
+            opacity: 0.28;
+        }
+
+        .nav-bar:hover {
+            opacity: 1;
+        }
+
+        .nav-bar.collapsed {
+            opacity: 0;
+            transform: translateY(-80px);
+            pointer-events: none;
+        }
+
         .nav-btn {
-            padding: 10px 24px;
+            padding: 8px 14px;
             background: rgba(255, 255, 255, 0.15);
             color: white;
             border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 50px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.25s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .nav-btn.icon-only {
+            padding: 8px 11px;
+            font-size: 1rem;
         }
 
         .nav-btn:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
+        }
+
+        .nav-btn:focus-visible,
+        .nav-handle:focus-visible {
+            outline: 3px solid #ffd166;
+            outline-offset: 2px;
         }
 
         .nav-btn:disabled {
@@ -201,14 +233,101 @@
         .nav-title {
             color: white;
             font-weight: 700;
-            font-size: 1.05rem;
-            margin-inline-start: 10px;
+            font-size: 1rem;
+            margin-inline: 8px 4px;
+            max-width: 32vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.35);
+            margin: 0 2px;
+        }
+
+        /* Small handle that brings the hidden bar back */
+        .nav-handle {
+            position: fixed;
+            top: 12px;
+            inset-inline-start: 12px;
+            z-index: 1003;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.85), rgba(118, 75, 162, 0.85));
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            opacity: 0.35;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .nav-handle.active {
+            display: flex;
+        }
+
+        .nav-handle:hover {
+            opacity: 1;
+            transform: scale(1.08);
+        }
+
+        /* Thin strip along the top edge: hovering it reveals the hidden bar */
+        .nav-hotspot {
+            position: fixed;
+            top: 0;
+            inset-inline-start: 0;
+            width: 320px;
+            height: 8px;
+            z-index: 1003;
+            display: none;
+        }
+
+        .nav-hotspot.active {
+            display: block;
+        }
+
+        .card-newtab {
+            position: absolute;
+            top: 12px;
+            inset-inline-end: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 2px solid #e3e6f5;
+            background: white;
+            color: #667eea;
+            font-size: 0.95rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.25s ease;
+        }
+
+        .tool-card {
+            position: relative;
+        }
+
+        .tool-card:hover .card-newtab,
+        .card-newtab:focus-visible {
+            opacity: 1;
+        }
+
+        .card-newtab:hover {
+            background: #667eea;
+            color: white;
         }
 
         .iframe-container {
             width: 100%;
-            height: calc(100vh - 64px);
-            margin-top: 64px;
+            height: 100vh;
+            margin-top: 0;
             border: none;
             overflow: auto;
         }
@@ -269,23 +388,28 @@
             }
 
             .nav-bar {
-                height: 56px;
-                padding: 0 12px;
-                gap: 8px;
+                height: 44px;
+                padding: 0 8px;
+                gap: 4px;
+                top: 8px;
+                inset-inline-start: 8px;
             }
 
             .nav-btn {
-                padding: 8px 16px;
-                font-size: 0.85rem;
+                padding: 7px 12px;
+                font-size: 0.8rem;
+            }
+
+            .nav-btn span.label {
+                display: none;
             }
 
             .nav-title {
                 display: none;
             }
 
-            .iframe-container {
-                height: calc(100vh - 56px);
-                margin-top: 56px;
+            .card-newtab {
+                opacity: 1;
             }
         }
 
@@ -414,16 +538,25 @@
 
     <!-- Persistent Top Navigation Bar -->
     <div class="nav-bar" id="navBar">
-        <button class="nav-btn" id="backBtn" onclick="goBack()">
+        <button class="nav-btn" id="backBtn" onclick="goBack()" title="Back">
             <span>←</span>
-            <span>Back</span>
+            <span class="label">Back</span>
         </button>
-        <button class="nav-btn" id="forwardBtn" onclick="goForward()">
-            <span>Forward</span>
+        <button class="nav-btn" id="forwardBtn" onclick="goForward()" title="Forward">
+            <span class="label">Forward</span>
             <span>→</span>
         </button>
+        <button class="nav-btn icon-only" id="homeBtn" onclick="backToMain()" title="All tools">🏠</button>
+        <span class="nav-divider"></span>
+        <button class="nav-btn icon-only" id="fullscreenBtn" onclick="toggleFullscreen()" title="Full screen (F)">⛶</button>
+        <button class="nav-btn icon-only" id="newTabBtn" onclick="openCurrentInNewTab()" title="Open this tool in a new tab">↗</button>
+        <button class="nav-btn icon-only" id="hideBarBtn" onclick="setBarHidden(true)" title="Hide this bar">✕</button>
         <span class="nav-title" id="navTitle"></span>
     </div>
+
+    <!-- Handle + top-edge strip that bring the hidden bar back -->
+    <button class="nav-handle" id="navHandle" onclick="setBarHidden(false)" title="Show navigation bar">☰</button>
+    <div class="nav-hotspot" id="navHotspot"></div>
 
     <!-- Workshop Agenda Manager View -->
     <div class="tool-view" id="workshopView">
@@ -596,6 +729,8 @@
 
             document.getElementById('backBtn').disabled = navIndex === 0;
             document.getElementById('forwardBtn').disabled = navIndex === navHistory.length - 1;
+
+            applyBarState();
         }
 
         function openTool(toolName) {
@@ -631,10 +766,99 @@
             }
         }
 
-        // Keyboard shortcut - ESC to go back to main
+        /* ---------- Floating bar: hide / show / dim ---------- */
+        let barHidden = false;
+        try { barHidden = localStorage.getItem('tvet_bar_hidden') === '1'; } catch (e) {}
+
+        let dimTimer = null;
+
+        function applyBarState() {
+            const onTool = navHistory[navIndex] !== 'main';
+            const navBar = document.getElementById('navBar');
+            const handle = document.getElementById('navHandle');
+            const hotspot = document.getElementById('navHotspot');
+
+            navBar.classList.toggle('collapsed', barHidden);
+            handle.classList.toggle('active', onTool && barHidden);
+            hotspot.classList.toggle('active', onTool && barHidden);
+            scheduleDim();
+        }
+
+        function setBarHidden(hidden) {
+            barHidden = hidden;
+            try { localStorage.setItem('tvet_bar_hidden', hidden ? '1' : '0'); } catch (e) {}
+            applyBarState();
+        }
+
+        function scheduleDim() {
+            const navBar = document.getElementById('navBar');
+            navBar.classList.remove('dimmed');
+            clearTimeout(dimTimer);
+            if (!barHidden && navHistory[navIndex] !== 'main') {
+                dimTimer = setTimeout(function () {
+                    navBar.classList.add('dimmed');
+                }, 5000);
+            }
+        }
+
+        document.getElementById('navBar').addEventListener('mouseenter', scheduleDim);
+        document.getElementById('navHotspot').addEventListener('mouseenter', function () {
+            setBarHidden(false);
+        });
+
+        /* ---------- Full screen ---------- */
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(function () {});
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', function () {
+            document.getElementById('fullscreenBtn').textContent =
+                document.fullscreenElement ? '⤡' : '⛶';
+        });
+
+        /* ---------- Open in a new tab ---------- */
+        function openInNewTab(toolName) {
+            const url = tools[toolName];
+            if (url) { window.open(url, '_blank', 'noopener'); }
+        }
+
+        function openCurrentInNewTab() {
+            const state = navHistory[navIndex];
+            if (state !== 'main') { openInNewTab(state); }
+        }
+
+        // Add a small ↗ button to every tool card on the landing page
+        document.querySelectorAll('.tool-card').forEach(function (card) {
+            const match = /openTool\('([^']+)'\)/.exec(card.getAttribute('onclick') || '');
+            if (!match) { return; }
+            const btn = document.createElement('button');
+            btn.className = 'card-newtab';
+            btn.textContent = '↗';
+            btn.title = 'Open in a new tab';
+            btn.setAttribute('aria-label', 'Open ' + (toolTitles[match[1]] || 'tool') + ' in a new tab');
+            btn.onclick = function (e) {
+                e.stopPropagation();
+                openInNewTab(match[1]);
+            };
+            card.appendChild(btn);
+        });
+
+        // Keyboard shortcuts - ESC back to the tool list, F for full screen
         document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && navHistory[navIndex] !== 'main') {
+            if (event.key === 'Escape' && !document.fullscreenElement && navHistory[navIndex] !== 'main') {
                 backToMain();
+            }
+            if ((event.key === 'f' || event.key === 'F') && navHistory[navIndex] !== 'main'
+                && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                toggleFullscreen();
+            }
+            if ((event.key === 'h' || event.key === 'H') && navHistory[navIndex] !== 'main'
+                && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                setBarHidden(!barHidden);
             }
         });
 

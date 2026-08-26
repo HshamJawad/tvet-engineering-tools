@@ -11,8 +11,45 @@
             box-sizing: border-box;
         }
 
+        /* Cairo (variable font, weights 200–1000) — used ONLY for the
+           Arabic interface, added on top of the tool's existing fonts
+           rather than replacing them.
+
+           The path is relative ("fonts/Cairo.woff2"), matching where the
+           file sits in the TVET Engineering Tools repo (a /fonts folder
+           beside this tool). That relative path is also exactly why
+           nothing needs to change when this file is used on its own: if
+           there is no fonts/Cairo.woff2 next to it, the browser's font
+           request 404s, @font-face is simply never satisfied, and every
+           font-family list below falls through to 'Calibri'/'Arial'
+           silently — no error the person would see, no broken layout,
+           just the tool's original look. font-display: swap keeps text
+           visible with the fallback font while Cairo loads rather than
+           hiding it, so a slow font fetch is never mistaken for a
+           blank/broken page. */
+        @font-face {
+            font-family: 'Cairo';
+            src: url('fonts/Cairo.woff2') format('woff2');
+            font-weight: 200 1000;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        /* One font stack, referenced everywhere below via var(--ui-font)
+           instead of repeating the literal list at every rule (it was
+           previously copy-pasted across roughly a dozen selectors).
+           body.rtl overrides the variable, so every one of those rules —
+           inputs, textareas, table cells, everything — picks up Cairo
+           the moment the Arabic interface is active, without having to
+           hunt down and edit each of them individually, and without
+           special-casing which element is "in" the Arabic interface:
+           they all just inherit whichever value is currently in scope. */
+        :root {
+            --ui-font: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         body {
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -21,7 +58,8 @@
 
         body.rtl {
             direction: rtl;
-            font-family: 'Calibri', 'Arial', 'Tahoma', sans-serif;
+            --ui-font: 'Cairo', 'Calibri', 'Arial', 'Tahoma', sans-serif;
+            font-family: var(--ui-font);
         }
 
         .container {
@@ -148,7 +186,7 @@
             border: 2px solid #e1e5e9;
             border-radius: 10px;
             font-size: 1.05rem;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
             transition: all 0.3s ease;
             background: #fafbfc;
         }
@@ -397,7 +435,7 @@
             font-weight: bold;
             color: #667eea;
             background: #f8f9fa;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
             font-size: 14px;
         }
 
@@ -419,7 +457,7 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             text-align: center;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
         }
 
         .duration-cell {
@@ -434,7 +472,7 @@
             border-radius: 5px;
             text-align: center;
             font-weight: 600;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
             background: #fafbfc;
             cursor: pointer;
         }
@@ -458,7 +496,7 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             resize: vertical;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
         }
 
         .facilitator-cell {
@@ -473,7 +511,7 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             resize: vertical;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
         }
 
         .actions-cell {
@@ -666,7 +704,7 @@
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 20px;
-            font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--ui-font);
             line-height: 1.5;
             white-space: pre-line;
             min-height: 200px;

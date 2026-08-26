@@ -1368,14 +1368,31 @@
                 </div>
                 <div class="form-group">
                     <label style="display: flex; align-items: center; gap: 10px;">
-                        <span data-en="Registration Link" data-ar="رابط التسجيل">Registration Link</span>
+                        <span data-en="Link" data-ar="الرابط">Link</span>
                         <small style="color: #666; font-size: 0.75rem; font-weight: normal;">
                             (<span data-en="Enable for online workshops" data-ar="يُفعل للورش الإلكترونية">Enable for online workshops</span>)
                         </small>
                     </label>
+                    <div style="display:flex;gap:16px;margin-bottom:6px;">
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal;cursor:pointer;">
+                            <input type="radio" name="linkType" value="registration" id="linkTypeRegistration" checked onchange="updateLinkTypePlaceholder()">
+                            <span data-en="Registration Link" data-ar="رابط تسجيل">Registration Link</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal;cursor:pointer;">
+                            <input type="radio" name="linkType" value="join" id="linkTypeJoin" onchange="updateLinkTypePlaceholder()">
+                            <span data-en="Join Link" data-ar="رابط حضور">Join Link</span>
+                        </label>
+                    </div>
                     <input type="url" id="registrationLink" data-en-placeholder="Enter registration URL (optional)" data-ar-placeholder="أدخل رابط التسجيل (اختياري)" placeholder="Enter registration URL (optional)" style="opacity: 0.5;" disabled>
                 </div>
-                <div class="form-group"></div>
+                <div class="form-group">
+                    <label data-en="Workshop Time" data-ar="وقت الورشة">Workshop Time</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                        <input type="time" id="workshopTimeFrom" style="flex:1;">
+                        <span data-en="to" data-ar="إلى">to</span>
+                        <input type="time" id="workshopTimeTo" style="flex:1;">
+                    </div>
+                </div>
             </div>
             
             <!-- Contact Information Section -->
@@ -1605,6 +1622,19 @@
             }
         }
 
+        // Registration link vs. join/attendance link — same URL field,
+        // different placeholder and different call-to-action wording in
+        // the LinkedIn post (see generateLinkedInPost()).
+        function updateLinkTypePlaceholder() {
+            const isJoin = document.getElementById('linkTypeJoin').checked;
+            const input = document.getElementById('registrationLink');
+            const enPh = isJoin ? 'Enter join/meeting URL (optional)' : 'Enter registration URL (optional)';
+            const arPh = isJoin ? 'أدخل رابط الحضور أو الاجتماع (اختياري)' : 'أدخل رابط التسجيل (اختياري)';
+            input.setAttribute('data-en-placeholder', enPh);
+            input.setAttribute('data-ar-placeholder', arPh);
+            input.placeholder = currentLanguage === 'ar' ? arPh : enPh;
+        }
+
         function toggleUserGuide() {
             const content = document.getElementById('userGuideContent');
             const toggle = document.getElementById('guideToggle');
@@ -1677,7 +1707,7 @@
             // Objectives / outcomes placeholders: these two textareas
             // carry data-en-placeholder / data-ar-placeholder but no bare
             // data-en, so the [data-en] sweep above never reaches them.
-            ['workshopObjectives', 'workshopOutcomes', 'participantNotes'].forEach(id => {
+            ['workshopObjectives', 'workshopOutcomes', 'participantNotes', 'registrationLink'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 const placeholder = el.getAttribute(`data-${lang}-placeholder`) || el.getAttribute('data-en-placeholder');
@@ -1887,12 +1917,20 @@
             if (workshopTitle) {
                 workshopTitle.placeholder = lang === 'ar' ? 'أدخل عنوان الورشة' : 'Enter workshop title';
             }
-            
-            // Update registration link field
-            const registrationLink = document.getElementById('registrationLink');
-            if (registrationLink) {
-                registrationLink.placeholder = lang === 'ar' ? 'أدخل رابط التسجيل (اختياري)' : 'Enter registration URL (optional)';
-            }
+
+            // NOTE: this function used to also carry an "Update
+            // registration link field" block here, hardcoding the
+            // placeholder to the registration-only wording on every
+            // language switch. That became actively wrong once the
+            // Registration/Join link choice was added — it always reset
+            // the placeholder to "Enter registration URL" even when Join
+            // Link was selected, overwriting the correct wording that the
+            // scoped sweep at the top of setLanguage() (which reads
+            // registrationLink's data-en-placeholder/data-ar-placeholder,
+            // kept current by updateLinkTypePlaceholder()) had just set
+            // moments earlier. Same duplicate-logic pattern as the
+            // disclaimer and duration-tip blocks below; removed for the
+            // same reason.
 
             // NOTE: this function used to also carry an "Update footer
             // disclaimer text" block here, hand-duplicating the exact
@@ -2001,6 +2039,11 @@
                 document.getElementById('workshopAddress').value = '';
                 document.getElementById('workshopVenue').value = '';
                 document.getElementById('registrationLink').value = '';
+                document.getElementById('linkTypeRegistration').checked = true;
+                document.getElementById('linkTypeJoin').checked = false;
+                updateLinkTypePlaceholder();
+                document.getElementById('workshopTimeFrom').value = '';
+                document.getElementById('workshopTimeTo').value = '';
                 document.getElementById('typeFaceToFace').checked = true;
                 document.getElementById('typeOnline').checked = false;
                 toggleRegistrationLink(); // Reset registration link state
@@ -2473,6 +2516,9 @@
                 venue: document.getElementById('workshopVenue').value,
                 type: document.querySelector('input[name="workshopType"]:checked')?.value || 'face-to-face',
                 registrationLink: document.getElementById('registrationLink').value,
+                linkType: document.querySelector('input[name="linkType"]:checked')?.value || 'registration',
+                workshopTimeFrom: document.getElementById('workshopTimeFrom').value,
+                workshopTimeTo: document.getElementById('workshopTimeTo').value,
                 contact: {
                     facilitatorName: document.getElementById('facilitatorName').value,
                     phone: document.getElementById('facilitatorPhone').value,
@@ -2966,7 +3012,7 @@
             _MB_DOC_RTL = isArabic;
 
             const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-                    AlignmentType, BorderStyle, WidthType, ShadingType } = mbDocxLib();
+                    AlignmentType, BorderStyle, WidthType, ShadingType, ExternalHyperlink } = mbDocxLib();
 
             // Appearance settings — configurable via the Settings modal
             // (⚙️ button in the top toolbar), persisted in localStorage,
@@ -3038,11 +3084,53 @@
                 dateRange = isArabic ? 'غير محدد' : 'Not specified';
             }
 
-            const infoRuns = [labelRun(isArabic ? 'التاريخ: ' : 'Date: '), plainRun(dateRange)];
+            // Date and Location are now on separate lines. A single (not
+            // ranged) date followed by more inline content — exactly this
+            // shape — is the same bidi ambiguity that glued the phone
+            // number to "Email:" earlier: an isolated value with
+            // something else trailing it on the same line. That fix was
+            // giving the trailing field its own line instead of trusting
+            // a rendering engine's bidi resolution; same fix here.
+            children.push(bodyPara([labelRun(isArabic ? 'التاريخ: ' : 'Date: '), plainRun(dateRange)]));
             if (data.location && data.location.trim()) {
-                infoRuns.push(plainRun('  |  '), labelRun(isArabic ? 'الموقع: ' : 'Location: '), plainRun(data.location.trim()));
+                children.push(bodyPara([labelRun(isArabic ? 'الموقع: ' : 'Location: '), plainRun(data.location.trim())]));
             }
-            children.push(bodyPara(infoRuns));
+
+            // Workshop time (From–To) — same field shown under the date
+            // in the LinkedIn post, added here too since this document is
+            // the tool's main deliverable. On its own line for the same
+            // bidi-safety reason the email address is: nothing follows it
+            // on that line to get reordered against.
+            if (data.workshopTimeFrom || data.workshopTimeTo) {
+                const timeText = (data.workshopTimeFrom && data.workshopTimeTo)
+                    ? `${_mbBidiIsolate(data.workshopTimeFrom)} ${isArabic ? 'إلى' : 'to'} ${_mbBidiIsolate(data.workshopTimeTo)}`
+                    : _mbBidiIsolate(data.workshopTimeFrom || data.workshopTimeTo);
+                children.push(bodyPara([labelRun(isArabic ? 'وقت الورشة: ' : 'Workshop Time: '), plainRun(timeText)]));
+            }
+
+            // Registration/Join link — shown in the LinkedIn post already;
+            // added here too because the Word document is what actually
+            // gets sent to a participant when the organiser shares the
+            // file itself instead of posting to LinkedIn, and the link is
+            // exactly the thing that participant needs. Real clickable
+            // hyperlink, not plain text, since the whole point is that
+            // someone reading this file can act on it directly. Own line,
+            // same bidi-safety reason as the email address — a URL is
+            // even more punctuation-heavy than an email, so it gets the
+            // same treatment.
+            if (data.type === 'online' && data.registrationLink && data.registrationLink.trim()) {
+                const url = data.registrationLink.trim();
+                const linkLabel = data.linkType === 'join'
+                    ? (isArabic ? 'رابط الحضور: ' : 'Join Link: ')
+                    : (isArabic ? 'رابط التسجيل: ' : 'Registration Link: ');
+                children.push(bodyPara([
+                    labelRun(linkLabel),
+                    new ExternalHyperlink({
+                        link: url,
+                        children: [new TextRun({ text: _mbBidiIsolate(url), color: '0563C1', underline: {}, font: _mbFont(), size: BODY_SZ })]
+                    })
+                ]));
+            }
 
             if (data.address && data.address.trim()) {
                 children.push(bodyPara([labelRun(isArabic ? 'العنوان الكامل: ' : 'Full Address: '), plainRun(data.address.trim())]));
@@ -3142,43 +3230,67 @@
                 borders: cellBorders
             });
 
-            data.days.forEach((day, index) => {
-                const dayHeaderText = formatDayDate(index, isArabic ? 'ar' : 'en');
-                children.push(heading(`${dayHeaderText} - ${isArabic ? 'جدول الأعمال' : 'Agenda'}`, { pageBreakBefore: index > 0 }));
+            // A session counts as having content if ANY field in it was
+            // actually filled — otherwise it's just the empty row the
+            // tool creates by default when a day is added. A day with NO
+            // sessions that have content is skipped entirely (heading and
+            // table both), which is exactly what a one-hour webinar
+            // announced purely through the LinkedIn post needs: title,
+            // date, time, objectives — no half-empty agenda table nobody
+            // filled in.
+            const hasContent = (session) => {
+                if (session.isBreak) {
+                    return !!(session.timeFrom || session.timeTo ||
+                        (session.duration && parseInt(session.duration) > 0) ||
+                        (session.breakType && session.breakType.trim()) ||
+                        (session.notes && session.notes.trim()));
+                }
+                return !!(session.timeFrom || session.timeTo ||
+                    (session.duration && parseInt(session.duration) > 0) ||
+                    (session.activities && session.activities.trim()) ||
+                    (session.facilitator && session.facilitator.trim()));
+            };
 
-                if (day.sessions && day.sessions.length) {
-                    const headerRow = new TableRow({
-                        tableHeader: true,
+            let renderedDayCount = 0;
+            data.days.forEach((day, index) => {
+                const meaningfulSessions = (day.sessions || []).filter(hasContent);
+                if (!meaningfulSessions.length) return;
+
+                const dayHeaderText = formatDayDate(index, isArabic ? 'ar' : 'en');
+                children.push(heading(`${dayHeaderText} - ${isArabic ? 'جدول الأعمال' : 'Agenda'}`, { pageBreakBefore: renderedDayCount > 0 }));
+                renderedDayCount++;
+
+                const headerRow = new TableRow({
+                    tableHeader: true,
+                    children: [
+                        headerCell(isArabic ? 'الجلسة' : 'Session', COLS.session),
+                        headerCell(isArabic ? 'من' : 'From', COLS.time),
+                        headerCell(isArabic ? 'إلى' : 'To', COLS.time),
+                        headerCell(isArabic ? 'المدة (دقيقة)' : 'Duration (min)', COLS.duration),
+                        headerCell(isArabic ? 'الأنشطة' : 'Activities', COLS.activity),
+                        headerCell(isArabic ? 'الميسر/الميسرون' : 'Facilitator(s)', COLS.facilitator)
+                    ]
+                });
+
+                const rows = [headerRow].concat(meaningfulSessions.map(session => {
+                    const isBreak = !!session.isBreak;
+                    const fill = isBreak ? BREAK_FILL : undefined;
+                    const activities = isBreak ? (session.breakType || (isArabic ? 'استراحة' : 'Break')) : (session.activities || '');
+                    const facilitator = isBreak ? (session.notes || '') : (session.facilitator || '');
+                    const sessionName = session.sessionName || (isBreak ? (isArabic ? 'استراحة' : 'Break') : (isArabic ? `الجلسة ${session.number}` : `Session ${session.number}`));
+                    return new TableRow({
                         children: [
-                            headerCell(isArabic ? 'الجلسة' : 'Session', COLS.session),
-                            headerCell(isArabic ? 'من' : 'From', COLS.time),
-                            headerCell(isArabic ? 'إلى' : 'To', COLS.time),
-                            headerCell(isArabic ? 'المدة (دقيقة)' : 'Duration (min)', COLS.duration),
-                            headerCell(isArabic ? 'الأنشطة' : 'Activities', COLS.activity),
-                            headerCell(isArabic ? 'الميسر/الميسرون' : 'Facilitator(s)', COLS.facilitator)
+                            bodyCell(sessionName, COLS.session, { italics: isBreak, fill }),
+                            centerCell(session.timeFrom || '-', COLS.time, { italics: isBreak, fill }),
+                            centerCell(session.timeTo || '-', COLS.time, { italics: isBreak, fill }),
+                            centerCell(parseInt(session.duration) || 0, COLS.duration, { italics: isBreak, fill }),
+                            bodyCell(activities, COLS.activity, { italics: isBreak, fill }),
+                            bodyCell(facilitator, COLS.facilitator, { italics: isBreak, fill })
                         ]
                     });
+                }));
 
-                    const rows = [headerRow].concat(day.sessions.map(session => {
-                        const isBreak = !!session.isBreak;
-                        const fill = isBreak ? BREAK_FILL : undefined;
-                        const activities = isBreak ? (session.breakType || (isArabic ? 'استراحة' : 'Break')) : (session.activities || '');
-                        const facilitator = isBreak ? (session.notes || '') : (session.facilitator || '');
-                        const sessionName = session.sessionName || (isBreak ? (isArabic ? 'استراحة' : 'Break') : (isArabic ? `الجلسة ${session.number}` : `Session ${session.number}`));
-                        return new TableRow({
-                            children: [
-                                bodyCell(sessionName, COLS.session, { italics: isBreak, fill }),
-                                centerCell(session.timeFrom || '-', COLS.time, { italics: isBreak, fill }),
-                                centerCell(session.timeTo || '-', COLS.time, { italics: isBreak, fill }),
-                                centerCell(parseInt(session.duration) || 0, COLS.duration, { italics: isBreak, fill }),
-                                bodyCell(activities, COLS.activity, { italics: isBreak, fill }),
-                                bodyCell(facilitator, COLS.facilitator, { italics: isBreak, fill })
-                            ]
-                        });
-                    }));
-
-                    children.push(new Table({ rows, width: { size: TABLE_W, type: WidthType.DXA }, layout: 'fixed' }));
-                }
+                children.push(new Table({ rows, width: { size: TABLE_W, type: WidthType.DXA }, layout: 'fixed' }));
             });
 
             // ---- Participant Notes ----
@@ -3247,6 +3359,12 @@
             document.getElementById('workshopAddress').value = data.address || '';
             document.getElementById('workshopVenue').value = data.venue || '';
             document.getElementById('registrationLink').value = data.registrationLink || '';
+            const isJoinLink = data.linkType === 'join';
+            document.getElementById('linkTypeJoin').checked = isJoinLink;
+            document.getElementById('linkTypeRegistration').checked = !isJoinLink;
+            updateLinkTypePlaceholder();
+            document.getElementById('workshopTimeFrom').value = data.workshopTimeFrom || '';
+            document.getElementById('workshopTimeTo').value = data.workshopTimeTo || '';
             document.getElementById('participantNotes').value = data.notes || '';
             
             // Set workshop type
@@ -3356,9 +3474,18 @@
             const data = collectData();
             const isArabic = currentLanguage === 'ar';
             
-            // Get first session time for workshop timing
+            // Workshop time: the explicit From–To field the author fills
+            // in (added specifically so a webinar's exact start/end shows
+            // under the date). Falls back to the first session's start
+            // time alone — the old behaviour — only when the author
+            // hasn't filled the new field in, so existing posts don't
+            // lose their time line outright.
             let workshopTime = '';
-            if (data.days && data.days.length > 0 && data.days[0].sessions && data.days[0].sessions.length > 0) {
+            if (data.workshopTimeFrom && data.workshopTimeTo) {
+                workshopTime = `${data.workshopTimeFrom} - ${data.workshopTimeTo}`;
+            } else if (data.workshopTimeFrom) {
+                workshopTime = data.workshopTimeFrom;
+            } else if (data.days && data.days.length > 0 && data.days[0].sessions && data.days[0].sessions.length > 0) {
                 const firstSession = data.days[0].sessions.find(session => !session.isBreak);
                 if (firstSession && firstSession.timeFrom) {
                     workshopTime = firstSession.timeFrom;
@@ -3391,16 +3518,17 @@
                 goalsSection += isArabic ? `\n\n✨ النتائج المتوقعة:\n• ${outcomes}` : `\n\n✨ Expected Results:\n• ${outcomes}`;
             }
             
-            // Generate registration link section
+            // Generate registration/join link section
             let registrationSection = '';
+            const isJoinLink = data.linkType === 'join';
             if (data.type === 'online' && data.registrationLink && data.registrationLink.trim()) {
                 registrationSection = isArabic 
-                    ? `\n🔗 سجل الآن: ${data.registrationLink.trim()}`
-                    : `\n🔗 Register now: ${data.registrationLink.trim()}`;
+                    ? `\n🔗 ${isJoinLink ? 'رابط الحضور' : 'سجل الآن'}: ${data.registrationLink.trim()}`
+                    : `\n🔗 ${isJoinLink ? 'Join link' : 'Register now'}: ${data.registrationLink.trim()}`;
             } else {
                 registrationSection = isArabic 
-                    ? `\n🔗 سجل الآن: [رابط التسجيل]`
-                    : `\n🔗 Register now: [Registration Link]`;
+                    ? `\n🔗 ${isJoinLink ? 'رابط الحضور' : 'سجل الآن'}: ${isJoinLink ? '[رابط الحضور]' : '[رابط التسجيل]'}`
+                    : `\n🔗 ${isJoinLink ? 'Join link' : 'Register now'}: ${isJoinLink ? '[Join Link]' : '[Registration Link]'}`;
             }
             
             // Add location/type information

@@ -741,6 +741,61 @@
             min-width: 120px;
         }
 
+        /* ── Word export settings modal ─────────────────────────────
+           Reuses .linkedin-modal / .linkedin-modal-content for the
+           overlay and card (they're generic, not LinkedIn-specific);
+           only these settings-specific rows and colour swatches are new. */
+        .docx-settings-row {
+            margin-bottom: 18px;
+        }
+        .docx-settings-row label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+        .docx-settings-row select {
+            width: 100%;
+            max-width: 220px;
+        }
+        .docx-color-swatches {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .docx-color-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, border-color 0.15s;
+            padding: 0;
+        }
+        .docx-color-swatch:hover {
+            transform: scale(1.1);
+        }
+        .docx-color-swatch.selected {
+            border-color: #333;
+        }
+        .docx-color-swatch .check {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            visibility: hidden;
+        }
+        .docx-color-swatch.selected .check {
+            visibility: visible;
+        }
+        .docx-settings-hint {
+            color: #888;
+            font-size: 0.82rem;
+            margin-top: 4px;
+        }
+
         .file-emoji {
             font-size: 16px;
             display: inline-block;
@@ -1181,6 +1236,10 @@
                     <span class="btn-text" data-en="LinkedIn Post" data-ar="منشور لينكد إن">LinkedIn Post</span>
                 </button>
             </div>
+            <button type="button" class="btn" onclick="openDocxSettingsModal()">
+                <span class="btn-emoji">⚙️</span>
+                <span class="btn-text" data-en="Settings" data-ar="الإعدادات">Settings</span>
+            </button>
         </div>
 
         <!-- User Guide -->
@@ -2648,6 +2707,259 @@
         }
 
         // Export as Word (.docx)
+        // ============================================================
+        // Word export appearance settings — global to the tool, saved in
+        // localStorage, and read fresh every time exportWord() runs.
+        // Changing them here does not touch any already-exported file,
+        // and does not depend on which workshop's JSON happens to be
+        // loaded — it is a preference for how THIS TOOL exports, not a
+        // property of any one workshop.
+        // ============================================================
+
+        var DOCX_SETTINGS_KEY = 'wamDocxSettings';
+
+        var DOCX_SETTINGS_DEFAULTS = {
+            mainHeadingSize: 16,       // pt — the workshop title
+            secondaryHeadingSize: 13,  // pt — Objectives / Outcomes / day headers / Participant Notes
+            tableFontSize: 11,         // pt — everything else: body text, table header and body cells
+            mainHeadingColor: '0070C0',
+            secondaryHeadingColor: '0070C0',
+            tableHeaderColor: '0070C0'
+        };
+
+        /* Eight fixed, professional colours rather than an open colour
+           picker — matches what was asked for, and it also means every
+           exported document uses a colour that was chosen to look right
+           in a formal document, not whatever a picker happened to land
+           on. */
+        var DOCX_COLOR_PALETTE = [
+            { hex: '0070C0', en: 'Blue',       ar: 'أزرق' },
+            { hex: '1F3864', en: 'Navy',       ar: 'كحلي' },
+            { hex: '375623', en: 'Dark Green', ar: 'أخضر داكن' },
+            { hex: '7B241C', en: 'Maroon',     ar: 'عنّابي' },
+            { hex: '5B2C6F', en: 'Purple',     ar: 'بنفسجي' },
+            { hex: '3F464D', en: 'Dark Gray',  ar: 'رمادي داكن' },
+            { hex: '0F6674', en: 'Teal',       ar: 'فيروزي داكن' },
+            { hex: '000000', en: 'Black',      ar: 'أسود' }
+        ];
+
+        function getDocxSettings() {
+            try {
+                var raw = localStorage.getItem(DOCX_SETTINGS_KEY);
+                if (!raw) return Object.assign({}, DOCX_SETTINGS_DEFAULTS);
+                var saved = JSON.parse(raw);
+                /* One-time migration: an earlier version of this modal had
+                   a single shared "headingColor" for both main and
+                   secondary headings. If that's what's in storage, carry
+                   it over as the main heading's colour (matching what it
+                   used to control) rather than silently discarding the
+                   user's earlier choice the first time they open Settings
+                   after this update. */
+                if (saved.headingColor && !saved.mainHeadingColor) {
+                    saved.mainHeadingColor = saved.headingColor;
+                    saved.secondaryHeadingColor = saved.headingColor;
+                }
+                return Object.assign({}, DOCX_SETTINGS_DEFAULTS, saved);
+            } catch (e) {
+                return Object.assign({}, DOCX_SETTINGS_DEFAULTS);
+            }
+        }
+
+        function saveDocxSettingsToStorage(settings) {
+            try { localStorage.setItem(DOCX_SETTINGS_KEY, JSON.stringify(settings)); }
+            catch (e) { console.warn('Could not save export settings:', e); }
+        }
+
+        /* Plain relative luminance: picks white text on the dark colours
+           in the palette above and black text on the rare light one, so
+           the table header stays readable regardless of which swatch is
+           chosen, without needing a separate "text colour" control. */
+        function _mbContrastText(hex) {
+            var r = parseInt(hex.substr(0, 2), 16);
+            var g = parseInt(hex.substr(2, 2), 16);
+            var b = parseInt(hex.substr(4, 2), 16);
+            var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            return luminance > 0.6 ? '000000' : 'FFFFFF';
+        }
+
+        /* Fixes exactly the bug reported against the phone/email line: a
+           phone number is plain digits — no Arabic characters — so
+           _mbHasArabic() never flags it and it never gets an explicit
+           direction of its own. Sitting inside an RTL paragraph between
+           an Arabic label before it and a "  |  " separator after it, the
+           Unicode bidi algorithm treats the digits and the neutral
+           separator as one ambiguous cluster and can resolve the visual
+           order so the separator lands on the wrong side of the number —
+           which is what made the phone number look glued directly onto
+           "Email:" with no gap.
+
+           U+200E (LEFT-TO-RIGHT MARK) is invisible and changes nothing
+           about how the digits themselves look; it only tells the bidi
+           algorithm "this run's edges are LTR", which pins where the
+           neutral separator next to it is allowed to go. Used only on
+           short numeric/Latin values embedded inside an Arabic line —
+           phone numbers, dates — never on the labels or connector words
+           around them, which need to stay ordinary RTL text. */
+        function _mbBidiIsolate(text) {
+            return '\u200E' + String(text === null || text === undefined ? '' : text) + '\u200E';
+        }
+
+        /* Draft state for the open modal — nothing here touches
+           localStorage until "Save" is clicked, so Reset/Cancel can
+           freely discard it. */
+        var _docxSettingsDraft = null;
+
+        function _mbSizeOptionsHtml(selected, minPt) {
+            var out = '';
+            var start = minPt || 12;
+            for (var pt = start; pt <= 18; pt++) {
+                out += '<option value="' + pt + '"' + (pt === selected ? ' selected' : '') + '>' + pt + '</option>';
+            }
+            return out;
+        }
+
+        function _mbSwatchesHtml(kind, selectedHex) {
+            return DOCX_COLOR_PALETTE.map(function (c) {
+                var isSel = c.hex === selectedHex;
+                var name = (currentLanguage === 'ar') ? c.ar : c.en;
+                return '<button type="button" class="docx-color-swatch' + (isSel ? ' selected' : '') +
+                    '" style="background:#' + c.hex + '" title="' + name +
+                    '" onclick="selectDocxColor(\'' + kind + '\', \'' + c.hex + '\')">' +
+                    '<span class="check">\u2713</span></button>';
+            }).join('');
+        }
+
+        function openDocxSettingsModal() {
+            _docxSettingsDraft = getDocxSettings();
+            var isArabic = currentLanguage === 'ar';
+
+            var existing = document.getElementById('docxSettingsModal');
+            if (existing) existing.remove();
+
+            var modal = document.createElement('div');
+            modal.id = 'docxSettingsModal';
+            modal.className = 'linkedin-modal';
+            modal.innerHTML =
+                '<div class="linkedin-modal-content">' +
+                    '<h3><span>\u2699\uFE0F</span><span>' + (isArabic ? 'إعدادات مستند Word' : 'Word Export Settings') + '</span></h3>' +
+                    '<p style="margin-bottom:15px;color:#666;font-size:0.9rem;">' +
+                        (isArabic
+                            ? 'هذه الإعدادات عامة للأداة — تنطبق على كل تصدير لاحق حتى تغيّرها مرة أخرى.'
+                            : 'These settings are global to the tool — they apply to every export until you change them again.') +
+                    '</p>' +
+
+                    '<div class="docx-settings-row">' +
+                        '<label>' + (isArabic ? 'حجم العنوان الرئيسي' : 'Main Heading Size') + '</label>' +
+                        '<select id="docxMainHeadingSize">' + _mbSizeOptionsHtml(_docxSettingsDraft.mainHeadingSize) + '</select>' +
+                        '<div class="docx-settings-hint">' + (isArabic ? 'عنوان الورشة في أعلى المستند' : 'The workshop title at the top of the document') + '</div>' +
+                    '</div>' +
+
+                    '<div class="docx-settings-row">' +
+                        '<label>' + (isArabic ? 'حجم العناوين الثانوية' : 'Secondary Heading Size') + '</label>' +
+                        '<select id="docxSecondaryHeadingSize">' + _mbSizeOptionsHtml(_docxSettingsDraft.secondaryHeadingSize) + '</select>' +
+                        '<div class="docx-settings-hint">' + (isArabic ? 'الأهداف، النتائج المتوقعة، عنوان كل يوم، ملاحظات المشاركين' : 'Objectives, Expected Outcomes, each day\'s heading, Participant Notes') + '</div>' +
+                    '</div>' +
+
+                    '<div class="docx-settings-row">' +
+                        '<label>' + (isArabic ? 'حجم فونت الجدول والمحتوى' : 'Table & Body Font Size') + '</label>' +
+                        '<select id="docxTableFontSize">' + _mbSizeOptionsHtml(_docxSettingsDraft.tableFontSize, 11) + '</select>' +
+                        '<div class="docx-settings-hint">' + (isArabic ? 'نص الجدول، التاريخ، الموقع، وكل نص عادي آخر' : 'Table text, date/location line, and all other body text') + '</div>' +
+                    '</div>' +
+
+                    '<div class="docx-settings-row">' +
+                        '<label>' + (isArabic ? 'لون العنوان الرئيسي' : 'Main Heading Color') + '</label>' +
+                        '<div class="docx-color-swatches" id="docxMainHeadingSwatches">' + _mbSwatchesHtml('mainHeading', _docxSettingsDraft.mainHeadingColor) + '</div>' +
+                    '</div>' +
+
+                    '<div class="docx-settings-row">' +
+                        '<label>' + (isArabic ? 'لون العناوين الثانوية' : 'Secondary Heading Color') + '</label>' +
+                        '<div class="docx-color-swatches" id="docxSecondaryHeadingSwatches">' + _mbSwatchesHtml('secondaryHeading', _docxSettingsDraft.secondaryHeadingColor) + '</div>' +
+                    '</div>' +
+
+                    '<div class="docx-settings-row">' +
+                        '<label>' + (isArabic ? 'لون رأس الجدول' : 'Table Header Color') + '</label>' +
+                        '<div class="docx-color-swatches" id="docxTableHeaderSwatches">' + _mbSwatchesHtml('tableHeader', _docxSettingsDraft.tableHeaderColor) + '</div>' +
+                    '</div>' +
+
+                    '<div class="linkedin-modal-actions">' +
+                        '<button class="btn btn-secondary" onclick="resetDocxSettingsModalToDefault()">' +
+                            '<span>' + (isArabic ? 'إعادة للوضع الافتراضي' : 'Reset to Default') + '</span>' +
+                        '</button>' +
+                        '<button class="btn btn-success" onclick="saveDocxSettings()">' +
+                            '<span>' + (isArabic ? 'حفظ' : 'Save') + '</span>' +
+                        '</button>' +
+                        '<button class="btn btn-secondary" onclick="closeDocxSettingsModal()">' +
+                            '<span>' + (isArabic ? 'إغلاق' : 'Close') + '</span>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+
+            document.body.appendChild(modal);
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeDocxSettingsModal();
+            });
+        }
+
+        /* Maps a swatch group's "kind" to its settings key and its
+           container id — one place to add a row if a fourth colour is
+           ever needed, instead of another branch in every function. */
+        var DOCX_COLOR_KIND_MAP = {
+            mainHeading:      { key: 'mainHeadingColor',      containerId: 'docxMainHeadingSwatches' },
+            secondaryHeading: { key: 'secondaryHeadingColor', containerId: 'docxSecondaryHeadingSwatches' },
+            tableHeader:      { key: 'tableHeaderColor',      containerId: 'docxTableHeaderSwatches' }
+        };
+
+        function selectDocxColor(kind, hex) {
+            if (!_docxSettingsDraft) return;
+            var info = DOCX_COLOR_KIND_MAP[kind];
+            if (!info) return;
+            _docxSettingsDraft[info.key] = hex;
+            var container = document.getElementById(info.containerId);
+            if (container) container.innerHTML = _mbSwatchesHtml(kind, hex);
+        }
+
+        function resetDocxSettingsModalToDefault() {
+            _docxSettingsDraft = Object.assign({}, DOCX_SETTINGS_DEFAULTS);
+            var mh = document.getElementById('docxMainHeadingSize');
+            var sh = document.getElementById('docxSecondaryHeadingSize');
+            var tf = document.getElementById('docxTableFontSize');
+            if (mh) mh.value = DOCX_SETTINGS_DEFAULTS.mainHeadingSize;
+            if (sh) sh.value = DOCX_SETTINGS_DEFAULTS.secondaryHeadingSize;
+            if (tf) tf.value = DOCX_SETTINGS_DEFAULTS.tableFontSize;
+            Object.keys(DOCX_COLOR_KIND_MAP).forEach(function (kind) {
+                var info = DOCX_COLOR_KIND_MAP[kind];
+                var el = document.getElementById(info.containerId);
+                if (el) el.innerHTML = _mbSwatchesHtml(kind, DOCX_SETTINGS_DEFAULTS[info.key]);
+            });
+        }
+
+        function saveDocxSettings() {
+            var mh = parseInt(document.getElementById('docxMainHeadingSize').value, 10);
+            var sh = parseInt(document.getElementById('docxSecondaryHeadingSize').value, 10);
+            var tf = parseInt(document.getElementById('docxTableFontSize').value, 10);
+
+            var settings = {
+                mainHeadingSize: mh,
+                secondaryHeadingSize: sh,
+                tableFontSize: tf,
+                mainHeadingColor: _docxSettingsDraft.mainHeadingColor,
+                secondaryHeadingColor: _docxSettingsDraft.secondaryHeadingColor,
+                tableHeaderColor: _docxSettingsDraft.tableHeaderColor
+            };
+            saveDocxSettingsToStorage(settings);
+            closeDocxSettingsModal();
+            showNotification(
+                currentLanguage === 'ar' ? 'تم حفظ إعدادات التصدير' : 'Export settings saved',
+                'success'
+            );
+        }
+
+        function closeDocxSettingsModal() {
+            var modal = document.getElementById('docxSettingsModal');
+            if (modal) modal.remove();
+            _docxSettingsDraft = null;
+        }
+
         function exportWord() {
             const data = collectData();
             const isArabic = currentLanguage === 'ar';
@@ -2656,26 +2968,46 @@
             const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
                     AlignmentType, BorderStyle, WidthType, ShadingType } = mbDocxLib();
 
-            const COLOR_BLUE = '0070C0';
+            // Appearance settings — configurable via the Settings modal
+            // (⚙️ button in the top toolbar), persisted in localStorage,
+            // read fresh on every export. pt values are converted to
+            // docx.js half-points (docx's own unit) right where they're
+            // read, so nothing downstream needs to know the conversion
+            // exists.
+            const settings = getDocxSettings();
+            const MAIN_HEADING_SZ = settings.mainHeadingSize * 2;
+            const SECONDARY_HEADING_SZ = settings.secondaryHeadingSize * 2;
+            const BODY_SZ = settings.tableFontSize * 2;
+            const COLOR_MAIN_HEADING = settings.mainHeadingColor;
+            const COLOR_SECONDARY_HEADING = settings.secondaryHeadingColor;
+            const COLOR_TABLE_HEADER = settings.tableHeaderColor;
+            const TABLE_HEADER_TEXT = _mbContrastText(settings.tableHeaderColor);
             const BREAK_FILL = 'F5F5F5';
+
+            // Page: A4 (210mm × 297mm), the standard OOXML twip values —
+            // defined once here so the table width below and the actual
+            // page setup at the end of this function can never disagree
+            // about how much horizontal space is really on the page.
+            const PAGE_W = 11906, PAGE_H = 16838;
+            const MARGIN_TOP = 1440, MARGIN_BOTTOM = 1440, MARGIN_LEFT = 1080, MARGIN_RIGHT = 1080;
 
             // ---- small helpers, one definition per look rather than
             // repeating the same TextRun/Paragraph options at every call
             // site — the same reasoning as buildInfoCh()'s helpers in
             // Module Builder's own exports_docx.js ----
             const heading = (text, opts) => new Paragraph({
-                children: [new TextRun(Object.assign({ text, bold: true, color: COLOR_BLUE, font: _mbFont() }, (opts && opts.run) || {}))],
+                children: [new TextRun(Object.assign({ text, bold: true, color: COLOR_SECONDARY_HEADING, font: _mbFont(), size: SECONDARY_HEADING_SZ }, (opts && opts.run) || {}))],
                 alignment: _mbStart(AlignmentType),
                 spacing: Object.assign({ before: 240, after: 120 }, (opts && opts.spacing) || {}),
                 pageBreakBefore: !!(opts && opts.pageBreakBefore)
             });
             const bodyPara = (runsOrText, opts) => new Paragraph({
-                children: Array.isArray(runsOrText) ? runsOrText : [new TextRun({ text: String(runsOrText), font: _mbFont(), size: 22 })],
+                children: Array.isArray(runsOrText) ? runsOrText : [new TextRun({ text: String(runsOrText), font: _mbFont(), size: BODY_SZ })],
                 alignment: _mbStart(AlignmentType),
                 spacing: Object.assign({ after: 60 }, (opts && opts.spacing) || {})
             });
-            const labelRun = (text) => new TextRun({ text, bold: true, font: _mbFont(), size: 22 });
-            const plainRun = (text) => new TextRun({ text, font: _mbFont(), size: 22 });
+            const labelRun = (text) => new TextRun({ text, bold: true, font: _mbFont(), size: BODY_SZ });
+            const plainRun = (text) => new TextRun({ text, font: _mbFont(), size: BODY_SZ });
 
             // ---- Title ----
             let workshopTitle;
@@ -2687,7 +3019,7 @@
 
             const children = [];
             children.push(new Paragraph({
-                children: [new TextRun({ text: workshopTitle, bold: true, size: 32, color: COLOR_BLUE, font: _mbFont() })],
+                children: [new TextRun({ text: workshopTitle, bold: true, size: MAIN_HEADING_SZ, color: COLOR_MAIN_HEADING, font: _mbFont() })],
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 200 }
             }));
@@ -2695,11 +3027,13 @@
             // ---- Date / Location / Address / Venue / Contact ----
             let dateRange;
             if (data.dateFrom && data.dateTo) {
-                dateRange = data.dateFrom === data.dateTo ? data.dateFrom : `${data.dateFrom} ${isArabic ? 'إلى' : 'to'} ${data.dateTo}`;
+                dateRange = data.dateFrom === data.dateTo
+                    ? _mbBidiIsolate(data.dateFrom)
+                    : `${_mbBidiIsolate(data.dateFrom)} ${isArabic ? 'إلى' : 'to'} ${_mbBidiIsolate(data.dateTo)}`;
             } else if (data.dateFrom) {
-                dateRange = data.dateFrom;
+                dateRange = _mbBidiIsolate(data.dateFrom);
             } else if (data.dateTo) {
-                dateRange = data.dateTo;
+                dateRange = _mbBidiIsolate(data.dateTo);
             } else {
                 dateRange = isArabic ? 'غير محدد' : 'Not specified';
             }
@@ -2718,13 +3052,36 @@
             }
             if (data.contact && (data.contact.facilitatorName || data.contact.phone || data.contact.email)) {
                 const c = data.contact;
-                const runs = [];
-                if (c.facilitatorName) runs.push(labelRun(isArabic ? 'الميسر: ' : 'Facilitator: '), plainRun(c.facilitatorName));
-                if (c.facilitatorName && (c.phone || c.email)) runs.push(plainRun('  |  '));
-                if (c.phone) runs.push(labelRun(isArabic ? 'الهاتف: ' : 'Phone: '), plainRun(c.phone));
-                if (c.phone && c.email) runs.push(plainRun('  |  '));
-                if (c.email) runs.push(labelRun(isArabic ? 'البريد الإلكتروني: ' : 'Email: '), plainRun(c.email));
-                children.push(bodyPara(runs, { spacing: { before: 120, after: 120 } }));
+
+                // Facilitator + Phone share a line — that pairing renders
+                // correctly (the separator between two Arabic labels with
+                // a short number in between behaves fine in practice).
+                if (c.facilitatorName || c.phone) {
+                    const runs = [];
+                    if (c.facilitatorName) runs.push(labelRun(isArabic ? 'الميسر: ' : 'Facilitator: '), plainRun(c.facilitatorName));
+                    if (c.facilitatorName && c.phone) runs.push(plainRun('  |  '));
+                    if (c.phone) runs.push(labelRun(isArabic ? 'الهاتف: ' : 'Phone: '), plainRun(_mbBidiIsolate(c.phone)));
+                    children.push(bodyPara(runs, { spacing: { before: 120, after: c.email ? 0 : 120 } }));
+                }
+
+                // Email gets its own line rather than sharing one with the
+                // phone number. Invisible bidi-direction marks (still
+                // applied via _mbBidiIsolate below, kept as a second line
+                // of defence) turned out not to be reliable across every
+                // Word version/renderer — different engines resolved the
+                // ambiguity between a digit run and its neighbouring "|"
+                // differently, and the number stayed visually glued to
+                // "Email:" in at least one real export. A number sitting
+                // at the very end of its own line, with nothing after it
+                // on that line to reorder against, has nothing left to be
+                // ambiguous about — a structural fix instead of hoping a
+                // rendering engine interprets a hint correctly.
+                if (c.email) {
+                    children.push(bodyPara(
+                        [labelRun(isArabic ? 'البريد الإلكتروني: ' : 'Email: '), plainRun(_mbBidiIsolate(c.email))],
+                        { spacing: { before: (c.facilitatorName || c.phone) ? 0 : 120, after: 120 } }
+                    ));
+                }
             }
 
             // ---- Objectives / Outcomes: one paragraph per line, no
@@ -2745,25 +3102,28 @@
             // ---- Agenda days ----
             const bdr = () => ({ style: BorderStyle.SINGLE, size: 2, color: '000000' });
             const cellBorders = { top: bdr(), bottom: bdr(), left: bdr(), right: bdr() };
-            // 7in usable width (8.5in page − 0.75in margins ×2) = 10080 DXA.
-            const TABLE_W = 10080;
-            const COLS = { session: 0.16, time: 0.09, duration: 0.07, activity: 0.36, facilitator: 0.23 };
+            const TABLE_W = PAGE_W - MARGIN_LEFT - MARGIN_RIGHT;
+            // "Duration (min)" / "المدة (دقيقة)" was wrapping across two
+            // lines in the header cell at 7%; widened to 11%, taken from
+            // Session/Activities/Facilitator(s) so the row still sums to
+            // exactly 100%.
+            const COLS = { session: 0.15, time: 0.09, duration: 0.11, activity: 0.34, facilitator: 0.22 };
             const dxa = (pct) => Math.round(TABLE_W * pct);
 
             const headerCell = (text, pct) => new TableCell({
                 children: [new Paragraph({
-                    children: [new TextRun({ text, bold: true, color: 'FFFFFF', font: _mbFont(), size: 22 })],
+                    children: [new TextRun({ text, bold: true, color: TABLE_HEADER_TEXT, font: _mbFont(), size: BODY_SZ })],
                     alignment: AlignmentType.CENTER
                 })],
                 width: { size: dxa(pct), type: WidthType.DXA },
-                shading: { type: ShadingType.CLEAR, fill: COLOR_BLUE },
+                shading: { type: ShadingType.CLEAR, fill: COLOR_TABLE_HEADER },
                 margins: { top: 60, bottom: 60, left: 60, right: 60 },
                 borders: cellBorders,
                 verticalAlign: 'center'
             });
             const bodyCell = (text, pct, opts) => new TableCell({
                 children: String(text || '').split('\n').map(line => new Paragraph({
-                    children: [new TextRun({ text: line, font: _mbFont(), size: 22, italics: !!(opts && opts.italics) })],
+                    children: [new TextRun({ text: line, font: _mbFont(), size: BODY_SZ, italics: !!(opts && opts.italics) })],
                     alignment: _mbStart(AlignmentType)
                 })),
                 width: { size: dxa(pct), type: WidthType.DXA },
@@ -2773,7 +3133,7 @@
             });
             const centerCell = (text, pct, opts) => new TableCell({
                 children: [new Paragraph({
-                    children: [new TextRun({ text: String(text || ''), font: _mbFont(), size: 22, italics: !!(opts && opts.italics) })],
+                    children: [new TextRun({ text: String(text || ''), font: _mbFont(), size: BODY_SZ, italics: !!(opts && opts.italics) })],
                     alignment: AlignmentType.CENTER
                 })],
                 width: { size: dxa(pct), type: WidthType.DXA },
@@ -2784,12 +3144,7 @@
 
             data.days.forEach((day, index) => {
                 const dayHeaderText = formatDayDate(index, isArabic ? 'ar' : 'en');
-                children.push(new Paragraph({
-                    children: [new TextRun({ text: `${dayHeaderText} - ${isArabic ? 'جدول الأعمال' : 'Agenda'}`, bold: true, size: 26, color: COLOR_BLUE, font: _mbFont() })],
-                    alignment: _mbStart(AlignmentType),
-                    spacing: { before: 240, after: 120 },
-                    pageBreakBefore: index > 0
-                }));
+                children.push(heading(`${dayHeaderText} - ${isArabic ? 'جدول الأعمال' : 'Agenda'}`, { pageBreakBefore: index > 0 }));
 
                 if (day.sessions && day.sessions.length) {
                     const headerRow = new TableRow({
@@ -2837,8 +3192,8 @@
                 sections: [{
                     properties: {
                         page: {
-                            size: { width: 12240, height: 15840 },              // 8.5in × 11in
-                            margin: { top: 1440, bottom: 1440, left: 1080, right: 1080 } // 1in / 0.75in
+                            size: { width: PAGE_W, height: PAGE_H },   // A4
+                            margin: { top: MARGIN_TOP, bottom: MARGIN_BOTTOM, left: MARGIN_LEFT, right: MARGIN_RIGHT }
                         },
                         bidi: isArabic
                     },

@@ -1357,7 +1357,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            <div class="version" data-en="Workshop Agenda Manager - Version 3.0 (2026)" data-ar="مدير جدول أعمال الورشة - الإصدار 3.0 (2026)">Workshop Agenda Manager - Version 3.0 (2026)</div>
+            <div class="version" data-en="Workshop Agenda Manager - Version 4.0 (2026)" data-ar="مدير جدول أعمال الورشة - الإصدار 4.0 (2026)">Workshop Agenda Manager - Version 4.0 (2026)</div>
             <div class="credit" data-en="By: Hisham Jawad Kadhim" data-ar="بواسطة: هشام جواد كاظم">By: Hisham Jawad Kadhim</div>
             <div class="disclaimer">
                 <p data-en="<strong>Disclaimer:</strong> This free tool helps manage workshop agendas. Use at your own risk - no warranties or liability assumed. Always backup your data." data-ar="<strong>إخلاء المسؤولية:</strong> هذه الأداة المجانية تساعد في إدارة جداول أعمال الورش. الاستخدام على مسؤوليتك الخاصة - لا توجد ضمانات أو مسؤولية. احرص دائماً على عمل نسخة احتياطية من بياناتك.">
@@ -1367,6 +1367,12 @@
         </div>
     </div>
 
+    <!-- Real .docx generation — same library and version Module Builder
+         uses, so both tools produce the same kind of file the same way.
+         Loaded from a CDN since this tool ships as a single static HTML
+         file with no build step; it needs the visitor's browser to have
+         internet access once, same as any CDN-hosted script. -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
     <script>
         let currentLanguage = 'en';
         let workshopData = {
@@ -2454,19 +2460,191 @@
             showNotification(currentLanguage === 'ar' ? 'تم تصدير ملف JSON بنجاح!' : 'JSON file exported successfully!', 'success');
         }
 
-        // Export as Word with Enhanced Logo Support
+        // ============================================================
+        // Real .docx generation — ported from Module Builder's own
+        // docx_bidi.js, trimmed for this tool's simpler model.
+        //
+        // docx@7.8.2 has two limitations this works around:
+        //   1. TextRun has no "language" option, so Word spell-checks
+        //      Arabic against its English dictionary and underlines
+        //      everything in red. Each run needs an explicit <w:lang>.
+        //   2. Inside a bidi paragraph, alignment is LOGICAL: asking for
+        //      "right" actually means "end", which in Arabic is the LEFT
+        //      edge. Every call below asks for START, which is correct
+        //      in both directions, rather than hand-picking LEFT/RIGHT.
+        //
+        // What's DROPPED from Module Builder's version: the vote-based
+        // language DETECTOR. That exists there because one project mixes
+        // English/Arabic/French pairs and has to guess which side the
+        // author meant. Nothing to guess here — isArabic is the explicit
+        // flag this tool already knows from the language toggle, before
+        // a single paragraph is built. _mbRtl() below just returns it.
+        // ============================================================
+
+        var _MB_LANG_AR    = 'ar-IQ';
+        var _MB_LANG_LATIN = 'en-US';
+        var _MB_ARABIC_RE  = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+        function _mbHasArabic(s) { return _MB_ARABIC_RE.test(String(s === null || s === undefined ? '' : s)); }
+
+        var _MB_DOC_RTL = false;
+        function _mbRtl()  { return _MB_DOC_RTL; }
+        function _mbFont() { return _MB_DOC_RTL ? 'Arial' : 'Calibri'; }
+        function _mbStart(A) { return (A && A.START !== undefined) ? A.START : A.LEFT; }
+        function _mbLangNode(val, bidi) { return { 'w:lang': { _attr: { 'w:val': val, 'w:bidi': bidi } } }; }
+        function _mbRunText(o) {
+            var kids = Array.isArray(o.children) ? o.children.filter(function (c) { return typeof c === 'string'; }) : [];
+            return [o.text || ''].concat(kids).join(' ');
+        }
+
+        function _mbWithArabicLang(BaseRun) {
+            return class extends BaseRun {
+                constructor(options) {
+                    var o = (typeof options === 'string') ? { text: options } : (options || {});
+                    var txt = _mbRunText(o);
+                    var isAr = _mbHasArabic(txt);
+                    super(isAr ? Object.assign({}, o, { rightToLeft: true }) : o);
+                    try { this.__mbText = txt; } catch (e) {}
+                    try { this.__mbAr = isAr; } catch (e) {}
+                    if (isAr) {
+                        try { this.properties.addChildElement(_mbLangNode(_MB_LANG_LATIN, _MB_LANG_AR)); }
+                        catch (e) { console.warn('w:lang not applied to run:', e); }
+                    }
+                }
+            };
+        }
+
+        function _mbWithArabicLangParagraph(BaseParagraph, WrappedRun) {
+            return class extends BaseParagraph {
+                constructor(options) {
+                    var o = (typeof options === 'string') ? { text: options } : (options || {});
+                    var own = String(o.text || '');
+                    var kids = Array.isArray(o.children) ? o.children : [];
+                    var hasAr = _mbHasArabic(own);
+                    for (var i = 0; i < kids.length && !hasAr; i++) {
+                        var k = kids[i];
+                        if (typeof k === 'string') hasAr = _mbHasArabic(k);
+                        else if (k && k.__mbText) hasAr = _mbHasArabic(k.__mbText);
+                    }
+                    if (hasAr) {
+                        o = Object.assign({}, o, { bidirectional: true });
+                    } else if (_mbRtl() && o.bidirectional === undefined) {
+                        o = Object.assign({}, o, { bidirectional: true });
+                    }
+                    if (hasAr || _mbRtl()) {
+                        var A = window.docx.AlignmentType || {};
+                        var START = (A.START !== undefined) ? A.START : 'left';
+                        var al = o.alignment;
+                        if (al === undefined || al === A.LEFT || al === 'left' ||
+                            al === A.RIGHT || al === 'right' || al === A.END || al === 'end') {
+                            o = Object.assign({}, o, { alignment: START });
+                        }
+                    }
+                    if (hasAr && o.text) {
+                        var rest = Object.assign({}, o);
+                        delete rest.text;
+                        rest.children = [new WrappedRun({ text: o.text })].concat(o.children || []);
+                        super(rest);
+                    } else {
+                        super(o);
+                    }
+                    try { this.__mbAr = hasAr; } catch (e) {}
+                }
+            };
+        }
+
+        function _mbNodeHasArabic(n) {
+            if (!n) return false;
+            if (typeof n === 'string') return _mbHasArabic(n);
+            return n.__mbAr === true;
+        }
+        function _mbAnyArabic(list) { return Array.isArray(list) && list.some(_mbNodeHasArabic); }
+
+        function _mbWithArabicFlag(Base) {
+            return class extends Base {
+                constructor(options) {
+                    var o = options || {};
+                    var ar = _mbAnyArabic(o.children);
+                    super(o);
+                    try { this.__mbAr = ar; } catch (e) {}
+                }
+            };
+        }
+
+        function _mbWithRtlTable(BaseTable) {
+            return class extends BaseTable {
+                constructor(options) {
+                    var o = options || {};
+                    var rtl = _mbRtl() || _mbAnyArabic(o.rows);
+                    super(rtl ? Object.assign({}, o, { visuallyRightToLeft: true }) : o);
+                    try { this.__mbAr = _mbAnyArabic(o.rows); } catch (e) {}
+                }
+            };
+        }
+
+        /** Returns the docx namespace with the four classes above swapped
+            in, so every call site below builds Arabic-safe output without
+            having to remember to ask for it. */
+        function mbDocxLib() {
+            var lib = window.docx;
+            var WrappedRun = _mbWithArabicLang(lib.TextRun);
+            return Object.assign({}, lib, {
+                TextRun: WrappedRun,
+                Paragraph: _mbWithArabicLangParagraph(lib.Paragraph, WrappedRun),
+                TableCell: _mbWithArabicFlag(lib.TableCell),
+                TableRow:  _mbWithArabicFlag(lib.TableRow),
+                Table: _mbWithRtlTable(lib.Table)
+            });
+        }
+
+        // Export as Word (.docx)
         function exportWord() {
             const data = collectData();
             const isArabic = currentLanguage === 'ar';
-            
-            // Format date range
-            let dateRange = '';
+            _MB_DOC_RTL = isArabic;
+
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+                    AlignmentType, BorderStyle, WidthType, ShadingType } = mbDocxLib();
+
+            const COLOR_BLUE = '0070C0';
+            const BREAK_FILL = 'F5F5F5';
+
+            // ---- small helpers, one definition per look rather than
+            // repeating the same TextRun/Paragraph options at every call
+            // site — the same reasoning as buildInfoCh()'s helpers in
+            // Module Builder's own exports_docx.js ----
+            const heading = (text, opts) => new Paragraph({
+                children: [new TextRun(Object.assign({ text, bold: true, color: COLOR_BLUE, font: _mbFont() }, (opts && opts.run) || {}))],
+                alignment: _mbStart(AlignmentType),
+                spacing: Object.assign({ before: 240, after: 120 }, (opts && opts.spacing) || {}),
+                pageBreakBefore: !!(opts && opts.pageBreakBefore)
+            });
+            const bodyPara = (runsOrText, opts) => new Paragraph({
+                children: Array.isArray(runsOrText) ? runsOrText : [new TextRun({ text: String(runsOrText), font: _mbFont(), size: 22 })],
+                alignment: _mbStart(AlignmentType),
+                spacing: Object.assign({ after: 60 }, (opts && opts.spacing) || {})
+            });
+            const labelRun = (text) => new TextRun({ text, bold: true, font: _mbFont(), size: 22 });
+            const plainRun = (text) => new TextRun({ text, font: _mbFont(), size: 22 });
+
+            // ---- Title ----
+            let workshopTitle;
+            if (data.title && data.title.trim()) {
+                workshopTitle = isArabic ? `ورشة ${data.title}` : `${data.title} Workshop`;
+            } else {
+                workshopTitle = isArabic ? 'ورشة عمل' : 'Workshop';
+            }
+
+            const children = [];
+            children.push(new Paragraph({
+                children: [new TextRun({ text: workshopTitle, bold: true, size: 32, color: COLOR_BLUE, font: _mbFont() })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 }
+            }));
+
+            // ---- Date / Location / Address / Venue / Contact ----
+            let dateRange;
             if (data.dateFrom && data.dateTo) {
-                if (data.dateFrom === data.dateTo) {
-                    dateRange = data.dateFrom;
-                } else {
-                    dateRange = `${data.dateFrom} ${isArabic ? 'إلى' : 'to'} ${data.dateTo}`;
-                }
+                dateRange = data.dateFrom === data.dateTo ? data.dateFrom : `${data.dateFrom} ${isArabic ? 'إلى' : 'to'} ${data.dateTo}`;
             } else if (data.dateFrom) {
                 dateRange = data.dateFrom;
             } else if (data.dateTo) {
@@ -2474,313 +2652,163 @@
             } else {
                 dateRange = isArabic ? 'غير محدد' : 'Not specified';
             }
-            
-            // Format title with "workshop" suffix
-            let workshopTitle = '';
-            if (data.title && data.title.trim()) {
-                workshopTitle = isArabic ? `ورشة ${data.title}` : `${data.title} Workshop`;
-            } else {
-                workshopTitle = isArabic ? 'ورشة عمل' : 'Workshop';
+
+            const infoRuns = [labelRun(isArabic ? 'التاريخ: ' : 'Date: '), plainRun(dateRange)];
+            if (data.location && data.location.trim()) {
+                infoRuns.push(plainRun('  |  '), labelRun(isArabic ? 'الموقع: ' : 'Location: '), plainRun(data.location.trim()));
+            }
+            children.push(bodyPara(infoRuns));
+
+            if (data.address && data.address.trim()) {
+                children.push(bodyPara([labelRun(isArabic ? 'العنوان الكامل: ' : 'Full Address: '), plainRun(data.address.trim())]));
+            }
+            if (data.venue && data.venue.trim()) {
+                children.push(bodyPara([labelRun(isArabic ? 'تفاصيل القاعة: ' : 'Venue Details: '), plainRun(data.venue.trim())]));
+            }
+            if (data.contact && (data.contact.facilitatorName || data.contact.phone || data.contact.email)) {
+                const c = data.contact;
+                const runs = [];
+                if (c.facilitatorName) runs.push(labelRun(isArabic ? 'الميسر: ' : 'Facilitator: '), plainRun(c.facilitatorName));
+                if (c.facilitatorName && (c.phone || c.email)) runs.push(plainRun('  |  '));
+                if (c.phone) runs.push(labelRun(isArabic ? 'الهاتف: ' : 'Phone: '), plainRun(c.phone));
+                if (c.phone && c.email) runs.push(plainRun('  |  '));
+                if (c.email) runs.push(labelRun(isArabic ? 'البريد الإلكتروني: ' : 'Email: '), plainRun(c.email));
+                children.push(bodyPara(runs, { spacing: { before: 120, after: 120 } }));
             }
 
-            // Generate proper Word-compatible HTML structure
-            let htmlContent = `
-            <!DOCTYPE html>
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
-                  xmlns:w="urn:schemas-microsoft-com:office:word" 
-                  xmlns="http://www.w3.org/1999/xhtml">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="ProgId" content="Word.Document">
-                <meta name="Generator" content="Microsoft Word 15">
-                <meta name="Originator" content="Microsoft Word 15">
-                <title>${workshopTitle}</title>
-                <!--[if gte mso 9]>
-                <xml>
-                    <w:WordDocument>
-                        <w:View>Print</w:View>
-                        <w:Zoom>90</w:Zoom>
-                        <w:DoNotPromptForConvert/>
-                        <w:DoNotShowRevisions/>
-                        <w:DoNotPrintRevisions/>
-                        <w:ValidateAgainstSchemas/>
-                        <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
-                        <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
-                        <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
-                    </w:WordDocument>
-                </xml>
-                <![endif]-->
-                <style>
-                    /* Page Setup */
-                    @page Section1 {
-                        size: 8.5in 11in;
-                        margin: 1.0in 0.75in 1.0in 0.75in;
-                        mso-header-margin: 0.5in;
-                        mso-footer-margin: 0.5in;
-                        mso-paper-source: 0;
-                    }
-                    
-                    div.Section1 { page: Section1; }
-                    
-                    body {
-                        font-family: ${isArabic ? "'Arial', sans-serif" : "'Calibri', sans-serif"};
-                        font-size: 11.0pt;
-                        line-height: 115%;
-                        margin: 0;
-                        padding: 0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        background: white;
-                    }
-                    
-                    /* Header section */
-                    .header-section {
-                        width: 100%;
-                        margin-bottom: 24pt;
-                    }
-                    
-                    /* Typography */
-                    h1 {
-                        font-family: ${isArabic ? "'Arial', sans-serif" : "'Calibri', sans-serif"};
-                        font-size: 16.0pt;
-                        font-weight: bold;
-                        text-align: center;
-                        margin: 12pt 0 10pt 0;
-                        color: #0070C0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                    }
-                    
-                    h2 {
-                        font-family: ${isArabic ? "'Arial', sans-serif" : "'Calibri', sans-serif"};
-                        font-size: 14.0pt;
-                        font-weight: bold;
-                        margin: 18pt 0 6pt 0;
-                        color: #0070C0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        text-align: ${isArabic ? 'right' : 'left'};
-                    }
-                    
-                    h3 {
-                        font-family: ${isArabic ? "'Arial', sans-serif" : "'Calibri', sans-serif"};
-                        font-size: 13.0pt;
-                        font-weight: bold;
-                        margin: 12pt 0 6pt 0;
-                        color: #0070C0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        text-align: ${isArabic ? 'right' : 'left'};
-                    }
-                    
-                    .workshop-info {
-                        font-family: ${isArabic ? "'Arial', sans-serif" : "'Calibri', sans-serif"};
-                        font-size: 11.0pt;
-                        text-align: ${isArabic ? 'right' : 'left'};
-                        margin: 4pt 0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                    }
-                    
-                    /* Tables */
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin: 6pt 0 12pt 0;
-                        font-family: ${isArabic ? "'Arial', sans-serif" : "'Calibri', sans-serif"};
-                        font-size: 11.0pt;
-                        direction: ltr;
-                    }
-                    
-                    th {
-                        background-color: #0070C0;
-                        color: #FFFFFF;
-                        border: 1pt solid black;
-                        padding: 4pt 3pt;
-                        font-weight: bold;
-                        text-align: center;
-                        vertical-align: middle;
-                    }
-                    
-                    td {
-                        border: 1pt solid black;
-                        padding: 4pt 3pt;
-                        vertical-align: top;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        text-align: ${isArabic ? 'right' : 'left'};
-                    }
-                    
-                    .break-row {
-                        background-color: #F5F5F5;
-                        font-style: italic;
-                    }
-                    
-                    .time-cell {
-                        text-align: center;
-                        width: 9%;
-                    }
-                    
-                    .duration-cell {
-                        text-align: center;
-                        width: 7%;
-                    }
-                    
-                    .session-cell {
-                        width: 16%;
-                    }
-                    
-                    .activity-cell {
-                        width: 36%;
-                    }
-                    
-                    .facilitator-cell {
-                        width: 23%;
-                    }
-                    
-                    /* Lists */
-                    ul {
-                        margin: 6pt 0;
-                        padding-${isArabic ? 'right' : 'left'}: 18pt;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                    }
-                    
-                    li {
-                        margin: 2pt 0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        text-align: ${isArabic ? 'right' : 'left'};
-                    }
-                    
-                    .objective-line {
-                        margin: 3pt 0;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        text-align: ${isArabic ? 'right' : 'left'};
-                    }
-                    
-                    .notes-section {
-                        margin-top: 12pt;
-                        direction: ${isArabic ? 'rtl' : 'ltr'};
-                        text-align: ${isArabic ? 'right' : 'left'};
-                    }
-                    
-                    .page-break {
-                        page-break-before: always;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="Section1">
-                    <div class="header-section">
-                        <h1>${workshopTitle}</h1>
-                        <div class="workshop-info">
-                            <strong>${isArabic ? 'التاريخ:' : 'Date:'}</strong> ${dateRange}
-                            ${data.location && data.location.trim() ? ` | <strong>${isArabic ? 'الموقع:' : 'Location:'}</strong> ${data.location.trim()}` : ''}
-                        </div>
-                        ${data.address && data.address.trim() ? `
-                        <div class="workshop-info">
-                            <strong>${isArabic ? 'العنوان الكامل:' : 'Full Address:'}</strong> ${data.address.trim()}
-                        </div>
-                        ` : ''}
-                        ${data.venue && data.venue.trim() ? `
-                        <div class="workshop-info">
-                            <strong>${isArabic ? 'تفاصيل القاعة:' : 'Venue Details:'}</strong> ${data.venue.trim()}
-                        </div>
-                        ` : ''}
-                        ${(data.contact && (data.contact.facilitatorName || data.contact.phone || data.contact.email)) ? `
-                        <div class="workshop-info" style="padding-top: 6pt; margin-top: 8pt;">
-                            ${data.contact.facilitatorName ? `<strong>${isArabic ? 'الميسر:' : 'Facilitator:'}</strong> ${data.contact.facilitatorName}` : ''}
-                            ${data.contact.facilitatorName && (data.contact.phone || data.contact.email) ? ' | ' : ''}
-                            ${data.contact.phone ? `<strong>${isArabic ? 'الهاتف:' : 'Phone:'}</strong> ${data.contact.phone}` : ''}
-                            ${data.contact.phone && data.contact.email ? ' | ' : ''}
-                            ${data.contact.email ? `<strong>${isArabic ? 'البريد الإلكتروني:' : 'Email:'}</strong> ${data.contact.email}` : ''}
-                        </div>
-                        ` : ''}
-                    </div>
-            `;
-
-            // Add content sections
-            // Printed as one paragraph per line, not an auto-generated
-            // <ul>/<li> list: the author's own numbering or bullets (typed
-            // via the toolbar) are already IN the text, and wrapping that
-            // in a second, automatic bullet list would print two markers
-            // per line. Same convention Module Builder uses for its own
-            // Objective field in the exported .docx.
-            if (data.objectives && data.objectives.length > 0) {
-                htmlContent += `<h2>${isArabic ? 'الأهداف' : 'Objectives'}</h2>`;
-                data.objectives.forEach(obj => {
-                    htmlContent += `<p class="objective-line">${obj}</p>`;
-                });
+            // ---- Objectives / Outcomes: one paragraph per line, no
+            // auto-generated bullet list — the author's own numbering or
+            // bullets (typed via the toolbar) are already in the text, and
+            // wrapping that in a second, automatic list would print two
+            // markers per line. Same convention Module Builder uses for
+            // its own Objective field. ----
+            if (data.objectives && data.objectives.length) {
+                children.push(heading(isArabic ? 'الأهداف' : 'Objectives'));
+                data.objectives.forEach(o => children.push(bodyPara(o)));
+            }
+            if (data.outcomes && data.outcomes.length) {
+                children.push(heading(isArabic ? 'النتائج المتوقعة' : 'Expected Outcomes'));
+                data.outcomes.forEach(o => children.push(bodyPara(o)));
             }
 
-            if (data.outcomes && data.outcomes.length > 0) {
-                htmlContent += `<h2>${isArabic ? 'النتائج المتوقعة' : 'Expected Outcomes'}</h2>`;
-                data.outcomes.forEach(outcome => {
-                    htmlContent += `<p class="objective-line">${outcome}</p>`;
-                });
-            }
+            // ---- Agenda days ----
+            const bdr = () => ({ style: BorderStyle.SINGLE, size: 2, color: '000000' });
+            const cellBorders = { top: bdr(), bottom: bdr(), left: bdr(), right: bdr() };
+            // 7in usable width (8.5in page − 0.75in margins ×2) = 10080 DXA.
+            const TABLE_W = 10080;
+            const COLS = { session: 0.16, time: 0.09, duration: 0.07, activity: 0.36, facilitator: 0.23 };
+            const dxa = (pct) => Math.round(TABLE_W * pct);
 
-            // Add agenda days
+            const headerCell = (text, pct) => new TableCell({
+                children: [new Paragraph({
+                    children: [new TextRun({ text, bold: true, color: 'FFFFFF', font: _mbFont(), size: 22 })],
+                    alignment: AlignmentType.CENTER
+                })],
+                width: { size: dxa(pct), type: WidthType.DXA },
+                shading: { type: ShadingType.CLEAR, fill: COLOR_BLUE },
+                margins: { top: 60, bottom: 60, left: 60, right: 60 },
+                borders: cellBorders,
+                verticalAlign: 'center'
+            });
+            const bodyCell = (text, pct, opts) => new TableCell({
+                children: String(text || '').split('\n').map(line => new Paragraph({
+                    children: [new TextRun({ text: line, font: _mbFont(), size: 22, italics: !!(opts && opts.italics) })],
+                    alignment: _mbStart(AlignmentType)
+                })),
+                width: { size: dxa(pct), type: WidthType.DXA },
+                shading: (opts && opts.fill) ? { type: ShadingType.CLEAR, fill: opts.fill } : undefined,
+                margins: { top: 60, bottom: 60, left: 80, right: 80 },
+                borders: cellBorders
+            });
+            const centerCell = (text, pct, opts) => new TableCell({
+                children: [new Paragraph({
+                    children: [new TextRun({ text: String(text || ''), font: _mbFont(), size: 22, italics: !!(opts && opts.italics) })],
+                    alignment: AlignmentType.CENTER
+                })],
+                width: { size: dxa(pct), type: WidthType.DXA },
+                shading: (opts && opts.fill) ? { type: ShadingType.CLEAR, fill: opts.fill } : undefined,
+                margins: { top: 60, bottom: 60, left: 60, right: 60 },
+                borders: cellBorders
+            });
+
             data.days.forEach((day, index) => {
-                if (index > 0) {
-                    htmlContent += '<div class="page-break"></div>';
-                }
-                
                 const dayHeaderText = formatDayDate(index, isArabic ? 'ar' : 'en');
-                htmlContent += `<h3>${dayHeaderText} - ${isArabic ? 'جدول الأعمال' : 'Agenda'}</h3>`;
-                
-                if (day.sessions && day.sessions.length > 0) {
-                    htmlContent += `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="session-cell">${isArabic ? 'الجلسة' : 'Session'}</th>
-                                <th class="time-cell">${isArabic ? 'من' : 'From'}</th>
-                                <th class="time-cell">${isArabic ? 'إلى' : 'To'}</th>
-                                <th class="duration-cell">${isArabic ? 'المدة<br>(دقيقة)' : 'Duration<br>(min)'}</th>
-                                <th class="activity-cell">${isArabic ? 'الأنشطة' : 'Activities'}</th>
-                                <th class="facilitator-cell">${isArabic ? 'الميسر/الميسرون' : 'Facilitator(s)'}</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-                    
-                    day.sessions.forEach(session => {
-                        const rowClass = session.isBreak ? 'break-row' : '';
-                        const activities = session.isBreak ? (session.breakType || (isArabic ? 'استراحة' : 'Break')) : (session.activities || '');
-                        const facilitator = session.isBreak ? (session.notes || '') : (session.facilitator || '');
-                        const sessionName = session.sessionName || (session.isBreak ? (isArabic ? 'استراحة' : 'Break') : (isArabic ? `الجلسة ${session.number}` : `Session ${session.number}`));
-                        
-                        htmlContent += `
-                            <tr ${rowClass ? `class="${rowClass}"` : ''}>
-                                <td class="session-cell">${sessionName}</td>
-                                <td class="time-cell">${session.timeFrom || '-'}</td>
-                                <td class="time-cell">${session.timeTo || '-'}</td>
-                                <td class="duration-cell">${parseInt(session.duration) || 0}</td>
-                                <td class="activity-cell">${(activities || '').replace(/\n/g, '<br>').trim()}</td>
-                                <td class="facilitator-cell">${(facilitator || '').replace(/\n/g, '<br>').trim()}</td>
-                            </tr>`;
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${dayHeaderText} - ${isArabic ? 'جدول الأعمال' : 'Agenda'}`, bold: true, size: 26, color: COLOR_BLUE, font: _mbFont() })],
+                    alignment: _mbStart(AlignmentType),
+                    spacing: { before: 240, after: 120 },
+                    pageBreakBefore: index > 0
+                }));
+
+                if (day.sessions && day.sessions.length) {
+                    const headerRow = new TableRow({
+                        tableHeader: true,
+                        children: [
+                            headerCell(isArabic ? 'الجلسة' : 'Session', COLS.session),
+                            headerCell(isArabic ? 'من' : 'From', COLS.time),
+                            headerCell(isArabic ? 'إلى' : 'To', COLS.time),
+                            headerCell(isArabic ? 'المدة (دقيقة)' : 'Duration (min)', COLS.duration),
+                            headerCell(isArabic ? 'الأنشطة' : 'Activities', COLS.activity),
+                            headerCell(isArabic ? 'الميسر/الميسرون' : 'Facilitator(s)', COLS.facilitator)
+                        ]
                     });
-                    
-                    htmlContent += '</tbody></table>';
+
+                    const rows = [headerRow].concat(day.sessions.map(session => {
+                        const isBreak = !!session.isBreak;
+                        const fill = isBreak ? BREAK_FILL : undefined;
+                        const activities = isBreak ? (session.breakType || (isArabic ? 'استراحة' : 'Break')) : (session.activities || '');
+                        const facilitator = isBreak ? (session.notes || '') : (session.facilitator || '');
+                        const sessionName = session.sessionName || (isBreak ? (isArabic ? 'استراحة' : 'Break') : (isArabic ? `الجلسة ${session.number}` : `Session ${session.number}`));
+                        return new TableRow({
+                            children: [
+                                bodyCell(sessionName, COLS.session, { italics: isBreak, fill }),
+                                centerCell(session.timeFrom || '-', COLS.time, { italics: isBreak, fill }),
+                                centerCell(session.timeTo || '-', COLS.time, { italics: isBreak, fill }),
+                                centerCell(parseInt(session.duration) || 0, COLS.duration, { italics: isBreak, fill }),
+                                bodyCell(activities, COLS.activity, { italics: isBreak, fill }),
+                                bodyCell(facilitator, COLS.facilitator, { italics: isBreak, fill })
+                            ]
+                        });
+                    }));
+
+                    children.push(new Table({ rows, width: { size: TABLE_W, type: WidthType.DXA }, layout: 'fixed' }));
                 }
             });
 
+            // ---- Participant Notes ----
             if (data.notes && data.notes.trim()) {
-                htmlContent += `<div class="notes-section"><h2>${isArabic ? 'ملاحظات للمشاركين' : 'Participant Notes'}</h2><div>${data.notes.replace(/\n/g, '<br>').trim()}</div></div>`;
+                children.push(heading(isArabic ? 'ملاحظات للمشاركين' : 'Participant Notes'));
+                data.notes.split('\n').forEach(line => children.push(bodyPara(line)));
             }
 
-            htmlContent += `
-                </div>
-            </body>
-            </html>`;
-
-            // Create and download the Word file (using .doc extension for better compatibility)
-            const blob = new Blob([htmlContent], { 
-                type: 'application/msword'
+            const doc = new Document({
+                styles: { default: { document: { run: { font: _mbFont() } } } },
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { width: 12240, height: 15840 },              // 8.5in × 11in
+                            margin: { top: 1440, bottom: 1440, left: 1080, right: 1080 } // 1in / 0.75in
+                        },
+                        bidi: isArabic
+                    },
+                    children
+                }]
             });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `workshop-agenda-${isArabic ? 'ar' : 'en'}-${new Date().toISOString().split('T')[0]}.doc`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showNotification(currentLanguage === 'ar' ? 'تم تصدير مستند Word بنجاح!' : 'Word document exported successfully!', 'success');
+
+            Packer.toBlob(doc).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `workshop-agenda-${isArabic ? 'ar' : 'en'}-${new Date().toISOString().split('T')[0]}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showNotification(currentLanguage === 'ar' ? 'تم تصدير مستند Word بنجاح!' : 'Word document exported successfully!', 'success');
+            }).catch(err => {
+                console.error('DOCX export failed:', err);
+                showNotification(currentLanguage === 'ar' ? 'فشل تصدير مستند Word' : 'Failed to export Word document', 'error');
+            });
         }
 
         // Load data from file

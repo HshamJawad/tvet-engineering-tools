@@ -7,13 +7,47 @@
     <!-- Include jsPDF and xlsx libraries from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- ExcelJS, self-hosted (replaces the SheetJS/xlsx.js CDN script) —
+         chosen specifically because it supports real cell styling (fill
+         colours, font colours, borders) that SheetJS's free build does
+         not, so the exported workbook can match the Word export's look
+         instead of being a plain black-and-white grid of values.
+         Expected at ./exceljs.min.js, next to this file. -->
+    <script src="exceljs.min.js"></script>
+    <!-- Real .docx generation — same library/version used by the sibling
+         Workshop Agenda Manager and Training Cost Calculator (PWA)
+         tools, for consistency. -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
     <style>
+        /* Cairo, self-hosted (variable font, weights 200–1000 in one
+           file). Applied ONLY to the Arabic interface — the English
+           side keeps its existing Arial — matching the sibling Workshop
+           Agenda Manager tool's convention exactly. Relative path
+           assumes a /fonts folder beside this file. */
+        @font-face {
+            font-family: 'Cairo';
+            src: url('fonts/Cairo.woff2') format('woff2');
+            font-weight: 200 1000;
+            font-style: normal;
+            font-display: swap;
+        }
+        /* input/select/button need the rule too: browsers do not
+           inherit font-family into form controls from an ancestor by
+           default, so scoping the font to #arabic-content alone would
+           silently miss every field inside it. */
+        #arabic-content,
+        #arabic-content input,
+        #arabic-content select,
+        #arabic-content button,
+        #toolbar-ar {
+            font-family: 'Cairo', Arial, sans-serif;
+        }
+
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: var(--fixed-bar-height, 60px) 20px 20px 20px;
             line-height: 1.6;
         }
         .calculator-container {
@@ -64,6 +98,12 @@
         .export-btn:hover {
             background-color: #0b7dda;
         }
+        .export-btn.word-btn {
+            background-color: #2B579A;
+        }
+        .export-btn.word-btn:hover {
+            background-color: #1e3f73;
+        }
         .results {
             margin-top: 20px;
             padding: 15px;
@@ -85,9 +125,40 @@
             background-color: #f2f2f2;
             font-weight: bold;
         }
-        .language-toggle {
-            text-align: right;
-            margin-bottom: 15px;
+        /* ── Fixed top bar — genuinely position:fixed, like a browser's
+           own toolbar, not position:sticky. This was the actual
+           complaint: sticky still starts in normal document flow and
+           only "sticks" once scrolling reaches it, which is why it kept
+           reading as something floating IN the page rather than a
+           permanent bar OUTSIDE the page's own scrolling — closer to
+           DACUM Lite's toolbar, which never moves at all regardless of
+           scroll position, because the page content scrolls
+           independently beneath it.
+
+           body's own padding-top (above) is set by JS to this bar's
+           real rendered height, since it wraps across 1–2 rows on
+           narrow screens and a fixed pixel guess would leave either a
+           gap or hide the page's own heading under the bar. */
+        #fixedTopBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        #fixedTopBar .export-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         .tab-container {
             margin-top: 20px;
@@ -171,7 +242,26 @@
     </style>
 </head>
 <body>
-    <div class="language-toggle">
+    <!-- Fixed top bar — one persistent bar, like a browser toolbar,
+         completely independent of page scroll (position:fixed, not
+         sticky). Holds the export buttons for whichever language is
+         active plus the language toggle itself; body's own top padding
+         (set in CSS via --fixed-bar-height, kept current by JS below)
+         reserves exactly enough room so page content never starts out
+         hidden underneath it. -->
+    <div id="fixedTopBar">
+        <div class="export-group" id="toolbar-en">
+            <button class="export-btn" onclick="exportToPDF()">📄 Save as PDF</button>
+            <button class="export-btn" onclick="exportToExcel()">📊 Save as Excel</button>
+            <button class="export-btn word-btn" onclick="exportToWord()">📝 Save as Word</button>
+        </div>
+        <!-- No PDF button here, matching the tool's own earlier choice
+             to remove it from the Arabic side (see the comment further
+             down where it was dropped). -->
+        <div class="export-group" id="toolbar-ar" style="display: none; direction: rtl;">
+            <button class="export-btn" onclick="exportToExcelAr()">📊 حفظ كملف Excel</button>
+            <button class="export-btn word-btn" onclick="exportToWordAr()">📝 حفظ كملف Word</button>
+        </div>
         <button id="toggleLanguage">العربية</button>
     </div>
 
@@ -200,6 +290,11 @@
                         <option value="CNY">Chinese Yuan (¥)</option>
                         <option value="AED">UAE Dirham (د.إ)</option>
                         <option value="SAR">Saudi Riyal (ر.س)</option>
+                        <option value="IQD">Iraqi Dinar (د.ع)</option>
+                        <option value="SYP">Syrian Pound (ل.س)</option>
+                        <option value="JOD">Jordanian Dinar (د.أ)</option>
+                        <option value="EGP">Egyptian Pound (ج.م)</option>
+                        <option value="OMR">Omani Rial (ر.ع.)</option>
                         <option value="CAD">Canadian Dollar (C$)</option>
                         <option value="AUD">Australian Dollar (A$)</option>
                         <option value="INR">Indian Rupee (₹)</option>
@@ -340,11 +435,6 @@
                 <h3>Summary</h3>
                 <p><strong>Total Cost:</strong> <span id="total-cost-currency">$</span><span id="total-cost">0</span></p>
                 <p><strong>Cost Per Trainee:</strong> <span id="cost-per-trainee-currency">$</span><span id="cost-per-trainee">0</span></p>
-                
-                <div class="export-buttons">
-                    <button id="export-pdf" class="export-btn">Save as PDF</button>
-                    <button id="export-excel" class="export-btn">Save as Excel</button>
-                </div>
             </div>
         </div>
     </div>
@@ -375,6 +465,11 @@
                         <option value="CNY">يوان صيني (¥)</option>
                         <option value="AED">درهم إماراتي (د.إ)</option>
                         <option value="SAR">ريال سعودي (ر.س)</option>
+                        <option value="IQD">دينار عراقي (د.ع)</option>
+                        <option value="SYP">ليرة سورية (ل.س)</option>
+                        <option value="JOD">دينار أردني (د.أ)</option>
+                        <option value="EGP">جنيه مصري (ج.م)</option>
+                        <option value="OMR">ريال عماني (ر.ع.)</option>
                         <option value="CAD">دولار كندي (C$)</option>
                         <option value="AUD">دولار أسترالي (A$)</option>
                         <option value="INR">روبية هندية (₹)</option>
@@ -515,11 +610,6 @@
                 <h3>الملخص</h3>
                 <p><strong>التكلفة الإجمالية:</strong> <span id="total-cost-currency-ar">$</span><span id="total-cost-ar">0</span></p>
                 <p><strong>التكلفة لكل متدرب:</strong> <span id="cost-per-trainee-currency-ar">$</span><span id="cost-per-trainee-ar">0</span></p>
-                
-                <div class="export-buttons">
-                    <!-- Removed PDF export button from Arabic interface as requested -->
-                    <button id="export-excel-ar" class="export-btn">حفظ كملف Excel</button>
-                </div>
             </div>
         </div>
     </div>
@@ -549,6 +639,11 @@
             'CNY': '¥',
             'AED': 'د.إ',
             'SAR': 'ر.س',
+            'IQD': 'د.ع',
+            'SYP': 'ل.س',
+            'JOD': 'د.أ',
+            'EGP': 'ج.م',
+            'OMR': 'ر.ع.',
             'CAD': 'C$',
             'AUD': 'A$',
             'INR': '₹'
@@ -600,18 +695,82 @@
         const toggleLanguageBtn = document.getElementById('toggleLanguage');
         const englishContent = document.getElementById('english-content');
         const arabicContent = document.getElementById('arabic-content');
+        const toolbarEn = document.getElementById('toolbar-en');
+        const toolbarAr = document.getElementById('toolbar-ar');
         
         toggleLanguageBtn.addEventListener('click', () => {
             if (englishContent.style.display !== 'none') {
                 englishContent.style.display = 'none';
                 arabicContent.style.display = 'block';
+                toolbarEn.style.display = 'none';
+                toolbarAr.style.display = 'flex';
                 toggleLanguageBtn.textContent = 'English';
             } else {
                 englishContent.style.display = 'block';
                 arabicContent.style.display = 'none';
+                toolbarEn.style.display = 'flex';
+                toolbarAr.style.display = 'none';
                 toggleLanguageBtn.textContent = 'العربية';
             }
+            positionToolbars();
         });
+
+        // #fixedTopBar is genuinely position:fixed — removed from the
+        // page's own document flow entirely, like a browser's toolbar,
+        // not position:sticky (which stays in flow and only "sticks"
+        // once scrolling reaches it — the earlier, wrong behaviour).
+        // Because a fixed element reserves no space of its own, body
+        // needs real top padding equal to the bar's rendered height, or
+        // the page's own heading starts out hidden underneath it. That
+        // height isn't a fixed number — the bar's buttons wrap onto a
+        // second row on narrow screens/after switching language — so
+        // it's measured, not guessed, on load and on every resize.
+        function positionToolbars() {
+            const bar = document.getElementById('fixedTopBar');
+            if (!bar) return;
+            document.documentElement.style.setProperty('--fixed-bar-height', (bar.offsetHeight + 20) + 'px');
+        }
+        window.addEventListener('DOMContentLoaded', positionToolbars);
+        window.addEventListener('resize', positionToolbars);
+
+        // Has the user actually calculated a cost yet? Exporting before
+        // that would run the export functions against empty required
+        // fields (trainees/duration) and produce a file full of NaN —
+        // this is the guard for all three export actions below.
+        function hasCalculated(isArabic) {
+            const results = document.getElementById(isArabic ? 'results-ar' : 'results');
+            return results && results.style.display === 'block';
+        }
+        function requireCalculation(isArabic) {
+            if (hasCalculated(isArabic)) return true;
+            alert(isArabic
+                ? 'يرجى حساب التكلفة الإجمالية أولاً قبل التصدير.'
+                : 'Please calculate the total cost first before exporting.');
+            return false;
+        }
+
+        // The actual source of the NaN totals in the exported file: the
+        // Number of Trainees / Workshop Duration fields carry `min="1"`
+        // as an HTML hint, but nothing here ever used a real <form> or
+        // called reportValidity() — clicking Calculate with either field
+        // still empty silently ran the arithmetic anyway. parseInt('')
+        // is NaN, and NaN propagates through every trainee-based cost
+        // and the final division, printing "$NaN" into the results table
+        // and then into whatever gets exported from it. This checks the
+        // two fields both languages actually require before either
+        // Calculate handler runs.
+        function validateRequiredFields(isArabic) {
+            const prefix = isArabic ? '-ar' : '';
+            const trainees = parseInt(document.getElementById('trainees' + prefix).value);
+            const duration = parseInt(document.getElementById('duration' + prefix).value);
+            if (!trainees || trainees < 1 || !duration || duration < 1) {
+                alert(isArabic
+                    ? 'يرجى إدخال عدد المتدربين ومدة الورشة (بحد أدنى 1 لكل منهما) قبل الحساب.'
+                    : 'Please enter both Number of Trainees and Workshop Duration (at least 1 each) before calculating.');
+                return false;
+            }
+            return true;
+        }
 
         // Function to get current currency symbol
         function getCurrentCurrencySymbol(isArabic = false) {
@@ -765,6 +924,7 @@
 
         // English calculation
         document.getElementById('calculate').addEventListener('click', () => {
+            if (!validateRequiredFields(false)) return;
             const data = gatherCalculationData();
             
             // Update table with nights details
@@ -801,6 +961,7 @@
 
         // Arabic calculation
         document.getElementById('calculate-ar').addEventListener('click', () => {
+            if (!validateRequiredFields(true)) return;
             const data = gatherCalculationData(true);
             
             // Update table with nights details in Arabic
@@ -836,7 +997,8 @@
         });
 
         // Export to PDF - English
-        document.getElementById('export-pdf').addEventListener('click', () => {
+        function exportToPDF() {
+            if (!requireCalculation(false)) return;
             const data = gatherCalculationData();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -903,135 +1065,477 @@
             
             // Save the PDF
             doc.save('Training_Cost_Calculation.pdf');
-        });
+        }
         
-        // Export to Excel - English
-        document.getElementById('export-excel').addEventListener('click', () => {
-            const data = gatherCalculationData();
-            
-            // Create worksheet with nights information
-            const worksheet = XLSX.utils.aoa_to_sheet([
-                ['Training Cost Calculation'],
-                ['Date', data.calculationDate],
-                ['Currency', `${data.currencyCode} (${data.currencySymbol})`],
-                [''],
-                ['Workshop Information'],
-                ['Number of Trainees', data.trainees],
-                ['Workshop Duration (days)', data.duration],
-                ['Number of Trainers', data.trainers],
-                ['Number of Co-Facilitators', data.cofacilitators],
-            ]);
-            
-            // Add nights information if applicable
-            let rowNum = 9;
+        // ============================================================
+        // Excel Export (.xlsx) — via ExcelJS (see the <script> tag in
+        // <head>), which supports real cell styling: fill colours, font
+        // colours, borders, column widths. The previous implementation
+        // used SheetJS's aoa_to_sheet(), which produces a genuine .xlsx
+        // file but essentially no styling in its free build — a plain
+        // grid of values with no visual relationship to the Word/PDF
+        // exports. This version matches those two: the same navy header
+        // (#1C3557) and green summary rows (#2E7D32, white text) used
+        // throughout this update.
+        // ============================================================
+
+        function buildExcelWorkbook(isArabic) {
+            if (!requireCalculation(isArabic)) return;
+            const data = gatherCalculationData(isArabic);
+
+            const COLOR_PRIMARY = '1C3557';
+            const COLOR_ACCENT  = '2E7D32';
+            const COLOR_SUBTOTAL = 'F0F0F0';
+
+            const L = isArabic ? {
+                title: 'حساب تكلفة التدريب', sheetName: 'تكلفة التدريب',
+                date: 'التاريخ', currency: 'العملة',
+                trainees: 'عدد المتدربين', duration: 'مدة الورشة (بالأيام)',
+                trainers: 'عدد المدربين', cofacilitators: 'عدد المساعدين',
+                trainerNights: 'عدد ليالي المدرب', allowanceNights: 'عدد ليالي البدل',
+                itemHeader: 'البند', costHeader: `التكلفة (${data.currencySymbol})`,
+                venue: 'المكان', trainer: 'المدرب/الميسر', cofacilitator: 'المساعد',
+                equipment: 'إيجار المعدات', printing: 'خدمات الطباعة', catering: 'الضيافة',
+                management: 'رسوم إدارة الخدمة', materials: 'المواد', tools: 'الأدوات',
+                consumables: 'المواد الاستهلاكية', allowance: 'البدل الثابت',
+                transport: 'بدل النقل', certification: 'رسوم الشهادة',
+                totalFixed: 'إجمالي التكاليف الثابتة', totalPerTrainee: 'إجمالي تكاليف المتدربين',
+                perDay: 'لليوم', perNight: 'لليلة',
+                totalCost: 'التكلفة الإجمالية', costPerTrainee: 'التكلفة لكل متدرب'
+            } : {
+                title: 'Training Cost Calculation', sheetName: 'Training Cost',
+                date: 'Date', currency: 'Currency',
+                trainees: 'Number of Trainees', duration: 'Workshop Duration (days)',
+                trainers: 'Number of Trainers', cofacilitators: 'Number of Co-Facilitators',
+                trainerNights: 'Trainer Nights', allowanceNights: 'Allowance Nights',
+                itemHeader: 'Item', costHeader: `Cost (${data.currencySymbol})`,
+                venue: 'Venue', trainer: 'Trainer/Facilitator', cofacilitator: 'Co-Facilitator',
+                equipment: 'Equipment Rental', printing: 'Printing Services', catering: 'Catering',
+                management: 'Service Management Fees', materials: 'Materials', tools: 'Tools',
+                consumables: 'Consumables', allowance: 'Fixed Allowance',
+                transport: 'Transport Allowance', certification: 'Certification',
+                totalFixed: 'Total Fixed Costs', totalPerTrainee: 'Total Per-Trainee Costs',
+                perDay: 'per day', perNight: 'per night',
+                totalCost: 'Total Cost', costPerTrainee: 'Cost Per Trainee'
+            };
+
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'Training Cost Calculator';
+            const sheet = workbook.addWorksheet(L.sheetName, {
+                views: [{ rightToLeft: isArabic }]
+            });
+            sheet.columns = [{ width: 42 }, { width: 22 }];
+
+            const thinBorder = { style: 'thin', color: { argb: 'FF999999' } };
+            const allBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+            const alignRight = { horizontal: isArabic ? 'right' : 'left', vertical: 'middle' };
+            const alignCenter = { horizontal: 'center', vertical: 'middle' };
+
+            // ---- Title ----
+            sheet.mergeCells('A1:B1');
+            const titleCell = sheet.getCell('A1');
+            titleCell.value = L.title;
+            titleCell.font = { size: 16, bold: true, color: { argb: 'FF' + COLOR_PRIMARY } };
+            titleCell.alignment = alignCenter;
+            sheet.getRow(1).height = 26;
+
+            // ---- Info rows ----
+            const infoRows = [
+                [L.date, data.calculationDate],
+                [L.currency, `${data.currencyCode} (${data.currencySymbol})`],
+                [L.trainees, data.trainees],
+                [L.duration, data.duration],
+                [L.trainers, data.trainers],
+                [L.cofacilitators, data.cofacilitators]
+            ];
+            if (data.trainerPeriod === 'night') infoRows.push([L.trainerNights, data.trainerNights]);
+            if (data.allowancePeriod === 'night') infoRows.push([L.allowanceNights, data.allowanceNights]);
+
+            infoRows.forEach(([label, value]) => {
+                const row = sheet.addRow([label, value]);
+                row.getCell(1).font = { bold: true };
+                row.getCell(1).alignment = alignRight;
+                row.getCell(2).alignment = alignCenter;
+            });
+
+            sheet.addRow([]); // spacer
+
+            // ---- Cost breakdown table ----
+            const headerRow = sheet.addRow([L.itemHeader, L.costHeader]);
+            headerRow.eachCell(cell => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + COLOR_PRIMARY } };
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = alignCenter;
+                cell.border = allBorders;
+            });
+
+            const trainerLabel = `${L.trainer} (${data.trainerPeriod === 'day' ? L.perDay : L.perNight})`;
+            const allowanceLabel = `${L.allowance} (${data.allowancePeriod === 'day' ? L.perDay : L.perNight})`;
+
+            const lineItems = [
+                [L.venue, data.venueCost],
+                [trainerLabel, data.trainerCost],
+                [L.cofacilitator, data.cofacilitatorCost],
+                [L.equipment, data.equipmentCost],
+                [L.printing, data.printingCost],
+                [L.catering, data.cateringCost],
+                [L.management, data.managementCost],
+                [L.materials, data.materialsCost],
+                [L.tools, data.toolsCost],
+                [L.consumables, data.consumablesCost],
+                [allowanceLabel, data.allowanceCost],
+                [L.transport, data.transportCost],
+                [L.certification, data.certificationCost]
+            ];
+
+            const styleDataRow = (row, opts) => {
+                row.getCell(1).alignment = alignRight;
+                row.getCell(2).alignment = alignCenter;
+                row.eachCell(cell => {
+                    cell.border = allBorders;
+                    if (opts && opts.bold) cell.font = { bold: true, color: opts.color ? { argb: 'FF' + opts.color } : undefined };
+                    if (opts && opts.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + opts.fill } };
+                });
+            };
+
+            lineItems.forEach(([label, value]) => {
+                styleDataRow(sheet.addRow([label, Number(value.toFixed(2))]));
+            });
+
+            styleDataRow(sheet.addRow([L.totalFixed, Number(data.totalFixedCost.toFixed(2))]), { bold: true, fill: COLOR_SUBTOTAL });
+            styleDataRow(sheet.addRow([L.totalPerTrainee, Number(data.totalPerTraineeCost.toFixed(2))]), { bold: true, fill: COLOR_SUBTOTAL });
+            styleDataRow(sheet.addRow([L.totalCost, `${data.currencySymbol}${data.totalCost.toFixed(2)}`]), { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' });
+            styleDataRow(sheet.addRow([L.costPerTrainee, `${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`]), { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' });
+
+            return workbook.xlsx.writeBuffer().then(buffer => {
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = isArabic ? 'حساب_تكلفة_التدريب.xlsx' : 'Training_Cost_Calculation.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }).catch(err => {
+                console.error('Excel export failed:', err);
+                alert(isArabic ? 'فشل تصدير ملف Excel' : 'Failed to export Excel file');
+            });
+        }
+
+        function exportToExcel()   { buildExcelWorkbook(false); }
+        function exportToExcelAr() { buildExcelWorkbook(true); }
+        // ============================================================
+        // Word Export (.docx) — real OOXML via the docx library (see
+        // the CDN <script> tag in <head>), not an HTML file wearing a
+        // .doc extension. Same library, same version, same approach as
+        // the sibling Workshop Agenda Manager tool.
+        //
+        // This tool DOES have a real English/Arabic toggle (unlike the
+        // Training Cost Calculator PWA, which is Arabic-only), so the
+        // bidi helpers below take an explicit isArabic flag — matching
+        // Workshop Agenda Manager's approach rather than assuming one
+        // fixed direction.
+        // ============================================================
+
+        const _MB_LANG_AR    = 'ar-IQ';
+        const _MB_LANG_LATIN = 'en-US';
+        const _MB_ARABIC_RE  = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+        function _mbHasArabic(s) { return _MB_ARABIC_RE.test(String(s === null || s === undefined ? '' : s)); }
+        function _mbLangNode(val, bidi) { return { 'w:lang': { _attr: { 'w:val': val, 'w:bidi': bidi } } }; }
+        function _mbRunText(o) {
+            const kids = Array.isArray(o.children) ? o.children.filter(c => typeof c === 'string') : [];
+            return [o.text || ''].concat(kids).join(' ');
+        }
+
+        function _mbWithArabicLang(BaseRun) {
+            return class extends BaseRun {
+                constructor(options) {
+                    const o = (typeof options === 'string') ? { text: options } : (options || {});
+                    const txt = _mbRunText(o);
+                    const isAr = _mbHasArabic(txt);
+                    super(isAr ? Object.assign({}, o, { rightToLeft: true }) : o);
+                    try { this.__mbText = txt; this.__mbAr = isAr; } catch (e) {}
+                    if (isAr) {
+                        try { this.properties.addChildElement(_mbLangNode(_MB_LANG_LATIN, _MB_LANG_AR)); }
+                        catch (e) { console.warn('w:lang not applied to run:', e); }
+                    }
+                }
+            };
+        }
+
+        function _mbWithArabicLangParagraph(BaseParagraph, WrappedRun, docIsArabic) {
+            return class extends BaseParagraph {
+                constructor(options) {
+                    let o = (typeof options === 'string') ? { text: options } : (options || {});
+                    const own = String(o.text || '');
+                    const kids = Array.isArray(o.children) ? o.children : [];
+                    let hasAr = _mbHasArabic(own);
+                    for (let i = 0; i < kids.length && !hasAr; i++) {
+                        const k = kids[i];
+                        if (typeof k === 'string') hasAr = _mbHasArabic(k);
+                        else if (k && k.__mbText) hasAr = _mbHasArabic(k.__mbText);
+                    }
+                    if (hasAr) {
+                        o = Object.assign({}, o, { bidirectional: true });
+                    } else if (docIsArabic && o.bidirectional === undefined) {
+                        o = Object.assign({}, o, { bidirectional: true });
+                    }
+                    if (hasAr || docIsArabic) {
+                        const A = window.docx.AlignmentType || {};
+                        const START = (A.START !== undefined) ? A.START : 'right';
+                        const al = o.alignment;
+                        if (al === undefined || al === A.LEFT || al === 'left' || al === A.RIGHT || al === 'right' || al === A.END || al === 'end') {
+                            o = Object.assign({}, o, { alignment: START });
+                        }
+                    }
+                    if (hasAr && o.text) {
+                        const rest = Object.assign({}, o);
+                        delete rest.text;
+                        rest.children = [new WrappedRun({ text: o.text })].concat(o.children || []);
+                        super(rest);
+                    } else {
+                        super(o);
+                    }
+                    try { this.__mbAr = hasAr; } catch (e) {}
+                }
+            };
+        }
+
+        // The piece that was missing: text alignment inside a table cell
+        // means nothing if the table's own grid never flips direction.
+        // Workshop Agenda Manager (the sibling tool, no alignment
+        // complaints reported against it) wraps Table/TableRow/TableCell
+        // to set visuallyRightToLeft on the table itself for Arabic
+        // content — this tool's mbDocxLib never did that, so the two
+        // rounds of tweaking paragraph-level jc values were adjusting
+        // the wrong layer: the table grid stayed LTR regardless, while
+        // cell text tried to align one way or the other inside it,
+        // which is exactly the "looks backwards" result reported both
+        // times. Ported verbatim.
+        function _mbNodeHasArabic(n) {
+            if (!n) return false;
+            if (typeof n === 'string') return _mbHasArabic(n);
+            return n.__mbAr === true;
+        }
+        function _mbAnyArabic(list) { return Array.isArray(list) && list.some(_mbNodeHasArabic); }
+
+        function _mbWithArabicFlag(Base) {
+            return class extends Base {
+                constructor(options) {
+                    const o = options || {};
+                    const ar = _mbAnyArabic(o.children);
+                    super(o);
+                    try { this.__mbAr = ar; } catch (e) {}
+                }
+            };
+        }
+
+        function _mbWithRtlTable(BaseTable, docIsArabic) {
+            return class extends BaseTable {
+                constructor(options) {
+                    const o = options || {};
+                    const rtl = docIsArabic || _mbAnyArabic(o.rows);
+                    super(rtl ? Object.assign({}, o, { visuallyRightToLeft: true }) : o);
+                    try { this.__mbAr = _mbAnyArabic(o.rows); } catch (e) {}
+                }
+            };
+        }
+
+        function mbDocxLib(isArabic) {
+            const lib = window.docx;
+            const WrappedRun = _mbWithArabicLang(lib.TextRun);
+            return Object.assign({}, lib, {
+                TextRun: WrappedRun,
+                Paragraph: _mbWithArabicLangParagraph(lib.Paragraph, WrappedRun, isArabic),
+                TableCell: _mbWithArabicFlag(lib.TableCell),
+                TableRow:  _mbWithArabicFlag(lib.TableRow),
+                Table: _mbWithRtlTable(lib.Table, isArabic)
+            });
+        }
+
+        function buildWordDocument(isArabic) {
+            if (!requireCalculation(isArabic)) return;
+            const data = gatherCalculationData(isArabic);
+
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+                    AlignmentType, BorderStyle, WidthType, ShadingType } = mbDocxLib(isArabic);
+
+            const COLOR_PRIMARY = '1C3557';
+            const COLOR_ACCENT   = '2E7D32'; // matches the tool's own green (#4CAF50 family)
+            const FONT = isArabic ? 'Cairo' : 'Arial';
+
+            const L = isArabic ? {
+                title: 'حساب تكلفة التدريب',
+                date: 'التاريخ', currency: 'العملة',
+                trainees: 'عدد المتدربين', duration: 'مدة الورشة (بالأيام)',
+                trainers: 'عدد المدربين', cofacilitators: 'عدد المساعدين',
+                trainerNights: 'عدد ليالي المدرب', allowanceNights: 'عدد ليالي البدل',
+                itemHeader: 'البند', costHeader: `التكلفة (${data.currencySymbol})`,
+                venue: 'المكان', trainer: 'المدرب/الميسر', cofacilitator: 'المساعد',
+                equipment: 'إيجار المعدات', printing: 'خدمات الطباعة', catering: 'الضيافة',
+                management: 'رسوم إدارة الخدمة', materials: 'المواد', tools: 'الأدوات',
+                consumables: 'المواد الاستهلاكية', allowance: 'البدل الثابت',
+                transport: 'بدل النقل', certification: 'رسوم الشهادة',
+                totalFixed: 'إجمالي التكاليف الثابتة', totalPerTrainee: 'إجمالي تكاليف المتدربين',
+                perDay: 'لليوم', perNight: 'لليلة',
+                summary: 'الملخص', totalCost: 'التكلفة الإجمالية', costPerTrainee: 'التكلفة لكل متدرب'
+            } : {
+                title: 'Training Cost Calculation',
+                date: 'Date', currency: 'Currency',
+                trainees: 'Number of Trainees', duration: 'Workshop Duration (days)',
+                trainers: 'Number of Trainers', cofacilitators: 'Number of Co-Facilitators',
+                trainerNights: 'Trainer Nights', allowanceNights: 'Allowance Nights',
+                itemHeader: 'Item', costHeader: `Cost (${data.currencySymbol})`,
+                venue: 'Venue', trainer: 'Trainer/Facilitator', cofacilitator: 'Co-Facilitator',
+                equipment: 'Equipment Rental', printing: 'Printing Services', catering: 'Catering',
+                management: 'Service Management Fees', materials: 'Materials', tools: 'Tools',
+                consumables: 'Consumables', allowance: 'Fixed Allowance',
+                transport: 'Transport Allowance', certification: 'Certification',
+                totalFixed: 'Total Fixed Costs', totalPerTrainee: 'Total Per-Trainee Costs',
+                perDay: 'per day', perNight: 'per night',
+                summary: 'Summary', totalCost: 'Total Cost', costPerTrainee: 'Cost Per Trainee'
+            };
+
+            const children = [];
+            // Logical START alignment (not explicit LEFT/RIGHT) — this
+            // is what Workshop Agenda Manager uses, with no alignment
+            // complaints reported against it. My previous attempt
+            // blamed this value and switched to explicit physical
+            // LEFT/RIGHT, which made both exports render backwards
+            // instead: with visuallyRightToLeft now correctly set on
+            // the table (mbDocxLib, above) for Arabic content, physical
+            // LEFT/RIGHT and the table's own now-correct grid direction
+            // fought each other — explicit "right" inside a table that
+            // itself flips right-to-left lands on the wrong edge, which
+            // is exactly the reversed result reported. START/END resolve
+            // relative to the paragraph's actual direction instead of
+            // fighting it, matching the sibling tool.
+            const start = () => (AlignmentType.START !== undefined) ? AlignmentType.START : (isArabic ? 'right' : 'left');
+
+            children.push(new Paragraph({
+                children: [new TextRun({ text: L.title, bold: true, size: 32, color: COLOR_PRIMARY, font: FONT })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 }
+            }));
+            children.push(new Paragraph({
+                children: [new TextRun({ text: `${L.date}: ${data.calculationDate}`, size: 22, font: FONT })],
+                alignment: start(), spacing: { after: 60 }
+            }));
+            children.push(new Paragraph({
+                children: [new TextRun({ text: `${L.currency}: ${data.currencyCode} (${data.currencySymbol})`, size: 22, font: FONT })],
+                alignment: start(), spacing: { after: 60 }
+            }));
+            children.push(new Paragraph({
+                children: [new TextRun({ text: `${L.trainees}: ${data.trainees}  |  ${L.duration}: ${data.duration}`, size: 22, font: FONT })],
+                alignment: start(), spacing: { after: 60 }
+            }));
+            children.push(new Paragraph({
+                children: [new TextRun({ text: `${L.trainers}: ${data.trainers}  |  ${L.cofacilitators}: ${data.cofacilitators}`, size: 22, font: FONT })],
+                alignment: start(), spacing: { after: 60 }
+            }));
             if (data.trainerPeriod === 'night') {
-                XLSX.utils.sheet_add_aoa(worksheet, [['Trainer Nights', data.trainerNights]], {origin: rowNum});
-                rowNum++;
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${L.trainerNights}: ${data.trainerNights}`, size: 22, font: FONT })],
+                    alignment: start(), spacing: { after: 60 }
+                }));
             }
             if (data.allowancePeriod === 'night') {
-                XLSX.utils.sheet_add_aoa(worksheet, [['Allowance Nights', data.allowanceNights]], {origin: rowNum});
-                rowNum++;
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${L.allowanceNights}: ${data.allowanceNights}`, size: 22, font: FONT })],
+                    alignment: start(), spacing: { after: 60 }
+                }));
             }
-            
-            // Add empty row and cost breakdown header
-            XLSX.utils.sheet_add_aoa(worksheet, [[''], ['Cost Breakdown']], {origin: rowNum});
-            rowNum += 2;
-            
-            // Add cost table
-            XLSX.utils.sheet_add_aoa(worksheet, [
-                ['Item', `Cost (${data.currencySymbol})`],
-                ['Venue', data.venueCost.toFixed(2)],
-                [`Trainer (${data.trainerPeriod === 'day' ? 'per day' : 'per night'})`, data.trainerCost.toFixed(2)],
-                ['Co-Facilitator', data.cofacilitatorCost.toFixed(2)],
-                ['Equipment Rental', data.equipmentCost.toFixed(2)],
-                ['Printing Services', data.printingCost.toFixed(2)],
-                ['Catering', data.cateringCost.toFixed(2)],
-                ['Service Management Fees', data.managementCost.toFixed(2)],
-                ['Materials', data.materialsCost.toFixed(2)],
-                ['Tools', data.toolsCost.toFixed(2)],
-                ['Consumables', data.consumablesCost.toFixed(2)],
-                [`Fixed Allowance (${data.allowancePeriod === 'day' ? 'per day' : 'per night'})`, data.allowanceCost.toFixed(2)],
-                ['Transport Allowance', data.transportCost.toFixed(2)],
-                ['Certification', data.certificationCost.toFixed(2)],
-                ['Total Fixed Costs', data.totalFixedCost.toFixed(2)],
-                ['Total Per-Trainee Costs', data.totalPerTraineeCost.toFixed(2)],
-                [''],
-                ['Summary'],
-                ['Total Cost', `${data.currencySymbol}${data.totalCost.toFixed(2)}`],
-                ['Cost Per Trainee', `${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`]
-            ], {origin: rowNum});
-            
-            // Create workbook
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Training Cost');
-            
-            // Generate Excel file and download
-            XLSX.writeFile(workbook, 'Training_Cost_Calculation.xlsx');
-        });
-        
-        // Export to Excel - Arabic
-        document.getElementById('export-excel-ar').addEventListener('click', () => {
-            const data = gatherCalculationData(true);
-            
-            // Create worksheet with nights information
-            const worksheet = XLSX.utils.aoa_to_sheet([
-                ['حساب تكلفة التدريب'],
-                ['التاريخ', data.calculationDate],
-                ['العملة', `${data.currencyCode} (${data.currencySymbol})`],
-                [''],
-                ['معلومات الورشة'],
-                ['عدد المتدربين', data.trainees],
-                ['مدة الورشة (بالأيام)', data.duration],
-                ['عدد المدربين', data.trainers],
-                ['عدد المساعدين', data.cofacilitators],
-            ]);
-            
-            // Add nights information if applicable
-            let rowNum = 9;
-            if (data.trainerPeriod === 'night') {
-                XLSX.utils.sheet_add_aoa(worksheet, [['عدد ليالي المدرب', data.trainerNights]], {origin: rowNum});
-                rowNum++;
-            }
-            if (data.allowancePeriod === 'night') {
-                XLSX.utils.sheet_add_aoa(worksheet, [['عدد ليالي البدل', data.allowanceNights]], {origin: rowNum});
-                rowNum++;
-            }
-            
-            // Add empty row and cost breakdown header
-            XLSX.utils.sheet_add_aoa(worksheet, [[''], ['تفصيل التكاليف']], {origin: rowNum});
-            rowNum += 2;
-            
-            // Add cost table
-            XLSX.utils.sheet_add_aoa(worksheet, [
-                ['البند', `التكلفة (${data.currencySymbol})`],
-                ['المكان', data.venueCost.toFixed(2)],
-                [`المدرب (${data.trainerPeriod === 'day' ? 'لليوم' : 'لليلة'})`, data.trainerCost.toFixed(2)],
-                ['المساعد', data.cofacilitatorCost.toFixed(2)],
-                ['إيجار المعدات', data.equipmentCost.toFixed(2)],
-                ['خدمات الطباعة', data.printingCost.toFixed(2)],
-                ['الضيافة', data.cateringCost.toFixed(2)],
-                ['رسوم إدارة الخدمة', data.managementCost.toFixed(2)],
-                ['المواد', data.materialsCost.toFixed(2)],
-                ['الأدوات', data.toolsCost.toFixed(2)],
-                ['المواد الاستهلاكية', data.consumablesCost.toFixed(2)],
-                [`البدل الثابت (${data.allowancePeriod === 'day' ? 'لليوم' : 'لليلة'})`, data.allowanceCost.toFixed(2)],
-                ['بدل النقل', data.transportCost.toFixed(2)],
-                ['الشهادة', data.certificationCost.toFixed(2)],
-                ['إجمالي التكاليف الثابتة', data.totalFixedCost.toFixed(2)],
-                ['إجمالي تكاليف المتدربين', data.totalPerTraineeCost.toFixed(2)],
-                [''],
-                ['الملخص'],
-                ['التكلفة الإجمالية', `${data.currencySymbol}${data.totalCost.toFixed(2)}`],
-                ['التكلفة لكل متدرب', `${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`]
-            ], {origin: rowNum});
-            
-            // Create workbook
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'تكلفة التدريب');
-            
-            // Generate Excel file and download
-            XLSX.writeFile(workbook, 'حساب_تكلفة_التدريب.xlsx');
-        });
+
+            // ---- Cost breakdown table ----
+            const TABLE_W = 9360; // 6.5in usable width at 1in margins (US Letter)
+            const bdr = () => ({ style: BorderStyle.SINGLE, size: 2, color: '000000' });
+            const cellBorders = { top: bdr(), bottom: bdr(), left: bdr(), right: bdr() };
+
+            const headerCell = (text, widthPct) => new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: 'FFFFFF', font: FONT, size: 22 })], alignment: AlignmentType.CENTER })],
+                width: { size: Math.round(TABLE_W * widthPct), type: WidthType.DXA },
+                shading: { type: ShadingType.CLEAR, fill: COLOR_PRIMARY },
+                margins: { top: 60, bottom: 60, left: 80, right: 80 },
+                borders: cellBorders,
+                verticalAlign: 'center'
+            });
+            const labelCell = (text, opts) => new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text, font: FONT, size: 22, bold: !!(opts && opts.bold), color: (opts && opts.color) || undefined })], alignment: start() })],
+                width: { size: Math.round(TABLE_W * 0.7), type: WidthType.DXA },
+                shading: (opts && opts.fill) ? { type: ShadingType.CLEAR, fill: opts.fill } : undefined,
+                margins: { top: 50, bottom: 50, left: 80, right: 80 },
+                borders: cellBorders
+            });
+            const valueCell = (text, opts) => new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: String(text), font: FONT, size: 22, bold: !!(opts && opts.bold), color: (opts && opts.color) || undefined })], alignment: AlignmentType.CENTER })],
+                width: { size: Math.round(TABLE_W * 0.3), type: WidthType.DXA },
+                shading: (opts && opts.fill) ? { type: ShadingType.CLEAR, fill: opts.fill } : undefined,
+                margins: { top: 50, bottom: 50, left: 60, right: 60 },
+                borders: cellBorders
+            });
+
+            const trainerLabel = `${L.trainer} (${data.trainerPeriod === 'day' ? L.perDay : L.perNight})`;
+            const allowanceLabel = `${L.allowance} (${data.allowancePeriod === 'day' ? L.perDay : L.perNight})`;
+
+            const lineItems = [
+                [L.venue, data.venueCost],
+                [trainerLabel, data.trainerCost],
+                [L.cofacilitator, data.cofacilitatorCost],
+                [L.equipment, data.equipmentCost],
+                [L.printing, data.printingCost],
+                [L.catering, data.cateringCost],
+                [L.management, data.managementCost],
+                [L.materials, data.materialsCost],
+                [L.tools, data.toolsCost],
+                [L.consumables, data.consumablesCost],
+                [allowanceLabel, data.allowanceCost],
+                [L.transport, data.transportCost],
+                [L.certification, data.certificationCost]
+            ];
+
+            const rows = [new TableRow({ children: [headerCell(L.itemHeader, 0.7), headerCell(L.costHeader, 0.3)] })];
+            lineItems.forEach(([label, value]) => {
+                rows.push(new TableRow({ children: [labelCell(label), valueCell(value.toFixed(2))] }));
+            });
+            rows.push(new TableRow({ children: [labelCell(L.totalFixed, { bold: true, fill: 'F0F0F0' }), valueCell(data.totalFixedCost.toFixed(2), { bold: true, fill: 'F0F0F0' })] }));
+            rows.push(new TableRow({ children: [labelCell(L.totalPerTrainee, { bold: true, fill: 'F0F0F0' }), valueCell(data.totalPerTraineeCost.toFixed(2), { bold: true, fill: 'F0F0F0' })] }));
+            rows.push(new TableRow({ children: [labelCell(L.totalCost, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' }), valueCell(`${data.currencySymbol}${data.totalCost.toFixed(2)}`, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' })] }));
+            rows.push(new TableRow({ children: [labelCell(L.costPerTrainee, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' }), valueCell(`${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' })] }));
+
+            children.push(new Table({ rows, width: { size: TABLE_W, type: WidthType.DXA }, layout: 'fixed' }));
+
+            const doc = new Document({
+                styles: { default: { document: { run: { font: FONT } } } },
+                sections: [{
+                    properties: {
+                        page: {
+                            size: { width: 12240, height: 15840 },              // 8.5in × 11in (US Letter)
+                            margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 }
+                        },
+                        bidi: isArabic
+                    },
+                    children
+                }]
+            });
+
+            Packer.toBlob(doc).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = isArabic ? 'حساب_تكلفة_التدريب.docx' : 'Training_Cost_Calculation.docx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }).catch(err => {
+                console.error('DOCX export failed:', err);
+                alert(isArabic ? 'فشل تصدير مستند Word' : 'Failed to export Word document');
+            });
+        }
+
+        function exportToWord()   { buildWordDocument(false); }
+        function exportToWordAr() { buildWordDocument(true); }
 
         // Set default values for night inputs when duration changes
         document.getElementById('duration').addEventListener('input', function() {
@@ -1119,7 +1623,7 @@
     </script>
 
     <footer class="copyright">
-        &copy; 2025 Husham Jawad. All rights reserved. (Version 4.2)
+        &copy; 2026 Husham Jawad. All rights reserved. (Version 4.3)
     </footer>
     <div class="disclaimer">
         Disclaimer: This calculator is provided for informational purposes only. Users should verify all calculations according to their organization's specific policies and procedures. The creator does not assume any liability for errors or inaccuracies.

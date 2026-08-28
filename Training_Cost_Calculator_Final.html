@@ -74,35 +74,57 @@
         input[type="date"] {
             cursor: pointer;
         }
+        /* ── Button palette ──────────────────────────────────────────
+           One neutral surface for every button: #F9F9F9 (the supplied
+           swatch) with a hairline border and a full pill radius. The
+           previous set was four saturated colours competing in a single
+           toolbar row — green, two blues, purple, amber, red — which
+           reads as a demo rather than a working instrument. Colour is
+           now carried by the emoji glyph on each button and by hover
+           state alone, so the bar sits quietly above the form and the
+           user's own data is the only coloured thing on the page.
+
+           `border-radius: 999px` rather than a measured value: it is
+           larger than any button's half-height, so every button renders
+           as a true capsule no matter how its label wraps. */
         button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
+            background-color: #F9F9F9;
+            color: #333;
+            padding: 10px 20px;
+            border: 1px solid #E3E3E3;
+            border-radius: 999px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
             margin-right: 10px;
+            transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
         }
         button:hover {
-            background-color: #45a049;
+            background-color: #F0F0F0;
+            border-color: #CFCFCF;
+        }
+        button:active {
+            background-color: #E8E8E8;
+        }
+        button:focus-visible {
+            outline: 2px solid #7BA7D7;
+            outline-offset: 2px;
         }
         .export-buttons {
             margin-top: 15px;
             display: flex;
             gap: 10px;
         }
-        .export-btn {
-            background-color: #2196F3;
-        }
-        .export-btn:hover {
-            background-color: #0b7dda;
-        }
+        /* .export-btn / .word-btn / .file-btn / .import-btn now inherit
+           the neutral capsule above and are kept only as hooks for the
+           export handlers and any later restyling. */
+        .export-btn,
         .export-btn.word-btn {
-            background-color: #2B579A;
+            background-color: #F9F9F9;
+            color: #333;
         }
+        .export-btn:hover,
         .export-btn.word-btn:hover {
-            background-color: #1e3f73;
+            background-color: #F0F0F0;
         }
         .results {
             margin-top: 20px;
@@ -124,6 +146,13 @@
         th {
             background-color: #f2f2f2;
             font-weight: bold;
+        }
+        /* The on-screen results table (#cost-table-ar) inherits the
+           left-aligned rule above by default — it's a plain <table>
+           with no language-aware styling of its own. Right-align it
+           specifically within the Arabic interface. */
+        #arabic-content th, #arabic-content td {
+            text-align: right;
         }
         /* ── Fixed top bar — genuinely position:fixed, like a browser's
            own toolbar, not position:sticky. This was the actual
@@ -165,31 +194,41 @@
         }
         .tab-buttons {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 1px;
+            margin-bottom: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 0;
         }
+        /* Tabs left square-cornered on purpose: a capsule tab cannot
+           join the panel below it, and the panel + attached Calculate
+           button are meant to read as one card. So the pill shape is
+           for free-standing buttons only; tabs keep the classic folder
+           corner, now in the same neutral greys as everything else. */
         .tab-button {
             padding: 12px 20px;
-            background-color: #e0e0e0;
-            border: 1px solid #ccc;
+            background-color: #F1F1F1;
+            color: #666;
+            border: 1px solid #ddd;
+            border-bottom: none;
             border-radius: 6px 6px 0 0;
             cursor: pointer;
-            margin-right: 8px;
+            margin-right: 6px;
             font-size: 16px;
             font-weight: bold;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             position: relative;
             top: 1px;
         }
         .tab-button:hover {
-            background-color: #f8f8f8;
+            background-color: #F7F7F7;
+            color: #333;
         }
+        /* The active tab takes the panel's own background so the two
+           merge into a single surface, which is what makes it read as
+           the front sheet of the stack. */
         .tab-button.active {
-            background-color: #4CAF50;
-            color: white;
-            border-bottom: none;
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            background-color: #f9f9f9;
+            color: #1F2937;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.04);
         }
         .tab-content {
             display: none;
@@ -239,6 +278,72 @@
             border: 1px solid #d1e0d1;
             display: none;
         }
+
+        /* ── Project file buttons (save / import JSON) and the clear
+           action. Deliberately different hues from the export group so
+           the toolbar reads as three jobs, not one long row of blue:
+           blue = export a finished document, purple/amber = the working
+           project file (archive it, bring it back), red = destructive. */
+        /* Save/Import/Clear share the neutral capsule. The one cue kept
+           is on Clear: its label turns red on hover, which flags the
+           destructive action at the moment the pointer is on it without
+           putting a permanent red block in the toolbar. */
+        .file-btn, .import-btn { background-color: #F9F9F9; }
+        .clear-btn             { background-color: #F9F9F9; }
+        .clear-btn:hover       { background-color: #FBEDED; border-color: #E2B9B9; color: #B03030; }
+        /* Separator so the destructive button is visually detached from
+           the ones next to it and is less likely to be hit by mistake. */
+        #fixedTopBar .bar-sep {
+            width: 1px;
+            align-self: stretch;
+            background: #ddd;
+            margin: 0 2px;
+        }
+
+        /* ── Calculate button welded to the bottom of the tab card ──
+           It used to float loose inside the grey .calculator-container,
+           a small pill separated from the panel it acts on. Now it is
+           the panel's own bottom edge: the active .tab-content drops its
+           bottom border and bottom corners, and the button — full width,
+           no margin, rounded only at the bottom — closes the card off.
+           The pair reads as one object, so it is obvious the button
+           submits the fields directly above it. */
+        .tab-content.active {
+            border-bottom: none;
+            border-radius: 0 4px 0 0;
+            margin-bottom: 0;
+        }
+        #arabic-content .tab-content.active {
+            border-radius: 4px 0 0 0;
+        }
+        .calc-attached {
+            display: block;
+            width: 100%;
+            margin: 0 0 20px 0;
+            padding: 14px;
+            font-size: 17px;
+            font-weight: bold;
+            letter-spacing: 0.3px;
+            color: #1F2937;
+            background-color: #F2F2F2;
+            /* Same hairline as the panel above, minus the shared edge,
+               so the border reads as one continuous outline around the
+               card + button rather than two stacked boxes. Square top
+               corners for the same reason — the pill radius is reserved
+               for the free-standing toolbar buttons. */
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .calc-attached:hover {
+            background-color: #EAEAEA;
+            border-color: #ddd;
+        }
+        .calc-attached:active {
+            background-color: #E2E2E2;
+            transform: translateY(1px);
+        }
     </style>
 </head>
 <body>
@@ -254,6 +359,16 @@
             <button class="export-btn" onclick="exportToPDF()">📄 Save as PDF</button>
             <button class="export-btn" onclick="exportToExcel()">📊 Save as Excel</button>
             <button class="export-btn word-btn" onclick="exportToWord()">📝 Save as Word</button>
+            <span class="bar-sep"></span>
+            <!-- Project file: unlike the three exports above, these two
+                 round-trip. saveProject() writes every field (not just
+                 the computed totals) to a .json the user can archive,
+                 and importProject() reads one back so an old costing can
+                 be reopened and edited months later. -->
+            <button class="export-btn file-btn" onclick="saveProject()">💾 Save Work</button>
+            <button class="export-btn import-btn" onclick="triggerImport()">📂 Import Work</button>
+            <span class="bar-sep"></span>
+            <button class="export-btn clear-btn" onclick="clearAllFields()">🧹 Clear All</button>
         </div>
         <!-- No PDF button here, matching the tool's own earlier choice
              to remove it from the Arabic side (see the comment further
@@ -261,9 +376,18 @@
         <div class="export-group" id="toolbar-ar" style="display: none; direction: rtl;">
             <button class="export-btn" onclick="exportToExcelAr()">📊 حفظ كملف Excel</button>
             <button class="export-btn word-btn" onclick="exportToWordAr()">📝 حفظ كملف Word</button>
+            <span class="bar-sep"></span>
+            <button class="export-btn file-btn" onclick="saveProject(true)">💾 حفظ العمل</button>
+            <button class="export-btn import-btn" onclick="triggerImport(true)">📂 استيراد العمل</button>
+            <span class="bar-sep"></span>
+            <button class="export-btn clear-btn" onclick="clearAllFields(true)">🧹 تفريغ كل الحقول</button>
         </div>
         <button id="toggleLanguage">العربية</button>
     </div>
+    <!-- Single hidden picker shared by both languages; the click that
+         opened it records which language asked, so the confirmation
+         message afterwards comes back in that language. -->
+    <input type="file" id="jsonFileInput" accept=".json,application/json" style="display:none">
 
     <div id="english-content">
         <h1>Training Cost Calculator</h1>
@@ -420,9 +544,13 @@
                         <input type="number" id="certification" min="0" placeholder="Enter certification fee per trainee">
                     </div>
                 </div>
+
+                <!-- Inside .tab-container, immediately after the panels:
+                     the button is now the card's own bottom edge (see
+                     .calc-attached in the stylesheet) rather than a loose
+                     pill floating below it. -->
+                <button id="calculate" class="calc-attached">Calculate Total Cost</button>
             </div>
-            
-            <button id="calculate">Calculate Total Cost</button>
             
             <div class="results" id="results">
                 <h2>Cost Breakdown</h2>
@@ -595,9 +723,9 @@
                         <input type="number" id="certification-ar" min="0" placeholder="أدخل رسوم الشهادة لكل متدرب">
                     </div>
                 </div>
+
+                <button id="calculate-ar" class="calc-attached">حساب التكلفة الإجمالية</button>
             </div>
-            
-            <button id="calculate-ar">حساب التكلفة الإجمالية</button>
             
             <div class="results" id="results-ar">
                 <h2>تفصيل التكاليف</h2>
@@ -1228,14 +1356,20 @@
         // ============================================================
         // Word Export (.docx) — real OOXML via the docx library (see
         // the CDN <script> tag in <head>), not an HTML file wearing a
-        // .doc extension. Same library, same version, same approach as
-        // the sibling Workshop Agenda Manager tool.
+        // .doc extension.
         //
-        // This tool DOES have a real English/Arabic toggle (unlike the
-        // Training Cost Calculator PWA, which is Arabic-only), so the
-        // bidi helpers below take an explicit isArabic flag — matching
-        // Workshop Agenda Manager's approach rather than assuming one
-        // fixed direction.
+        // Rewritten to match Module Builder's own exports_docx.js
+        // (the most battle-tested docx export in this whole family of
+        // tools) line for line in spirit, after two earlier attempts at
+        // a "smart" wrapper that auto-injected bidirectional/alignment
+        // both produced backwards results. Module Builder's file does
+        // NOT auto-inject anything: every single Paragraph and
+        // TableCell sets `bidirectional: isArabic` and an explicit
+        // `alignment` by hand, and the Table itself gets
+        // `visuallyRightToLeft: isArabic` explicitly. No inference from
+        // detected Arabic characters, no per-paragraph guessing — one
+        // flag, decided once, threaded through by hand everywhere it's
+        // needed. More typing, far fewer ways to get it wrong.
         // ============================================================
 
         const _MB_LANG_AR    = 'ar-IQ';
@@ -1248,48 +1382,36 @@
             return [o.text || ''].concat(kids).join(' ');
         }
 
-        function _mbWithArabicLang(BaseRun) {
+        // Tags an individual run with w:rtl + w:lang ONLY when the whole
+        // export is Arabic AND this specific run's text is actually
+        // Arabic-scripted — gated on isArabic first, exactly like
+        // Module Builder's _withArabicLang, so a stray Arabic character
+        // can never flip a run in an English export.
+        function _mbWithArabicLang(BaseRun, isArabic) {
             return class extends BaseRun {
                 constructor(options) {
                     const o = (typeof options === 'string') ? { text: options } : (options || {});
-                    const txt = _mbRunText(o);
-                    const isAr = _mbHasArabic(txt);
+                    const isAr = isArabic && _mbHasArabic(_mbRunText(o));
                     super(isAr ? Object.assign({}, o, { rightToLeft: true }) : o);
-                    try { this.__mbText = txt; this.__mbAr = isAr; } catch (e) {}
                     if (isAr) {
-                        try { this.properties.addChildElement(_mbLangNode(_MB_LANG_LATIN, _MB_LANG_AR)); }
+                        try { this.properties.addChildElement(_mbLangNode(_MB_LANG_AR, _MB_LANG_AR)); }
                         catch (e) { console.warn('w:lang not applied to run:', e); }
                     }
                 }
             };
         }
 
-        function _mbWithArabicLangParagraph(BaseParagraph, WrappedRun, docIsArabic) {
+        // Rewrites the { text: '...' } shorthand into an explicit
+        // WrappedRun child so the w:lang tagging above still applies —
+        // otherwise `new Paragraph({ text })` builds its run through the
+        // library's own TextRun and bypasses the wrapper entirely. Does
+        // NOT touch alignment or bidirectional; those are set by hand at
+        // every call site below, on purpose.
+        function _mbWithArabicLangParagraph(BaseParagraph, WrappedRun, isArabic) {
             return class extends BaseParagraph {
                 constructor(options) {
-                    let o = (typeof options === 'string') ? { text: options } : (options || {});
-                    const own = String(o.text || '');
-                    const kids = Array.isArray(o.children) ? o.children : [];
-                    let hasAr = _mbHasArabic(own);
-                    for (let i = 0; i < kids.length && !hasAr; i++) {
-                        const k = kids[i];
-                        if (typeof k === 'string') hasAr = _mbHasArabic(k);
-                        else if (k && k.__mbText) hasAr = _mbHasArabic(k.__mbText);
-                    }
-                    if (hasAr) {
-                        o = Object.assign({}, o, { bidirectional: true });
-                    } else if (docIsArabic && o.bidirectional === undefined) {
-                        o = Object.assign({}, o, { bidirectional: true });
-                    }
-                    if (hasAr || docIsArabic) {
-                        const A = window.docx.AlignmentType || {};
-                        const START = (A.START !== undefined) ? A.START : 'right';
-                        const al = o.alignment;
-                        if (al === undefined || al === A.LEFT || al === 'left' || al === A.RIGHT || al === 'right' || al === A.END || al === 'end') {
-                            o = Object.assign({}, o, { alignment: START });
-                        }
-                    }
-                    if (hasAr && o.text) {
+                    const o = (typeof options === 'string') ? { text: options } : (options || {});
+                    if (isArabic && o.text && _mbHasArabic(o.text)) {
                         const rest = Object.assign({}, o);
                         delete rest.text;
                         rest.children = [new WrappedRun({ text: o.text })].concat(o.children || []);
@@ -1297,60 +1419,16 @@
                     } else {
                         super(o);
                     }
-                    try { this.__mbAr = hasAr; } catch (e) {}
-                }
-            };
-        }
-
-        // The piece that was missing: text alignment inside a table cell
-        // means nothing if the table's own grid never flips direction.
-        // Workshop Agenda Manager (the sibling tool, no alignment
-        // complaints reported against it) wraps Table/TableRow/TableCell
-        // to set visuallyRightToLeft on the table itself for Arabic
-        // content — this tool's mbDocxLib never did that, so the two
-        // rounds of tweaking paragraph-level jc values were adjusting
-        // the wrong layer: the table grid stayed LTR regardless, while
-        // cell text tried to align one way or the other inside it,
-        // which is exactly the "looks backwards" result reported both
-        // times. Ported verbatim.
-        function _mbNodeHasArabic(n) {
-            if (!n) return false;
-            if (typeof n === 'string') return _mbHasArabic(n);
-            return n.__mbAr === true;
-        }
-        function _mbAnyArabic(list) { return Array.isArray(list) && list.some(_mbNodeHasArabic); }
-
-        function _mbWithArabicFlag(Base) {
-            return class extends Base {
-                constructor(options) {
-                    const o = options || {};
-                    const ar = _mbAnyArabic(o.children);
-                    super(o);
-                    try { this.__mbAr = ar; } catch (e) {}
-                }
-            };
-        }
-
-        function _mbWithRtlTable(BaseTable, docIsArabic) {
-            return class extends BaseTable {
-                constructor(options) {
-                    const o = options || {};
-                    const rtl = docIsArabic || _mbAnyArabic(o.rows);
-                    super(rtl ? Object.assign({}, o, { visuallyRightToLeft: true }) : o);
-                    try { this.__mbAr = _mbAnyArabic(o.rows); } catch (e) {}
                 }
             };
         }
 
         function mbDocxLib(isArabic) {
             const lib = window.docx;
-            const WrappedRun = _mbWithArabicLang(lib.TextRun);
+            const WrappedRun = _mbWithArabicLang(lib.TextRun, isArabic);
             return Object.assign({}, lib, {
                 TextRun: WrappedRun,
-                Paragraph: _mbWithArabicLangParagraph(lib.Paragraph, WrappedRun, isArabic),
-                TableCell: _mbWithArabicFlag(lib.TableCell),
-                TableRow:  _mbWithArabicFlag(lib.TableRow),
-                Table: _mbWithRtlTable(lib.Table, isArabic)
+                Paragraph: _mbWithArabicLangParagraph(lib.Paragraph, WrappedRun, isArabic)
             });
         }
 
@@ -1364,6 +1442,23 @@
             const COLOR_PRIMARY = '1C3557';
             const COLOR_ACCENT   = '2E7D32'; // matches the tool's own green (#4CAF50 family)
             const FONT = isArabic ? 'Cairo' : 'Arial';
+
+            // Not isArabic ? RIGHT : LEFT. Two separate reports, with the
+            // exact same code shape (physical RIGHT on a bidirectional:
+            // true paragraph), both came back showing Arabic content
+            // visually LEFT-aligned — the opposite of what was set. This
+            // matches a real, documented OOXML quirk: inside a
+            // bidirectional paragraph, some Word versions swap the
+            // VISUAL meaning of physical LEFT/RIGHT, because the values
+            // stay attached to logical run order rather than the screen
+            // side once bidi reordering applies. LEFT is used here for
+            // BOTH cases — for English (bidirectional: false) it means
+            // literally left, unaffected since no bidi reordering
+            // happens; for Arabic (bidirectional: true) that same LEFT
+            // value is what the swap turns into visually-right. English
+            // was already LEFT before this change and is untouched by
+            // it — only the Arabic outcome moves.
+            const SIDE = AlignmentType.LEFT;
 
             const L = isArabic ? {
                 title: 'حساب تكلفة التدريب',
@@ -1398,52 +1493,39 @@
             };
 
             const children = [];
-            // Logical START alignment (not explicit LEFT/RIGHT) — this
-            // is what Workshop Agenda Manager uses, with no alignment
-            // complaints reported against it. My previous attempt
-            // blamed this value and switched to explicit physical
-            // LEFT/RIGHT, which made both exports render backwards
-            // instead: with visuallyRightToLeft now correctly set on
-            // the table (mbDocxLib, above) for Arabic content, physical
-            // LEFT/RIGHT and the table's own now-correct grid direction
-            // fought each other — explicit "right" inside a table that
-            // itself flips right-to-left lands on the wrong edge, which
-            // is exactly the reversed result reported. START/END resolve
-            // relative to the paragraph's actual direction instead of
-            // fighting it, matching the sibling tool.
-            const start = () => (AlignmentType.START !== undefined) ? AlignmentType.START : (isArabic ? 'right' : 'left');
 
             children.push(new Paragraph({
                 children: [new TextRun({ text: L.title, bold: true, size: 32, color: COLOR_PRIMARY, font: FONT })],
                 alignment: AlignmentType.CENTER,
+                bidirectional: isArabic,
                 spacing: { after: 200 }
             }));
             children.push(new Paragraph({
                 children: [new TextRun({ text: `${L.date}: ${data.calculationDate}`, size: 22, font: FONT })],
-                alignment: start(), spacing: { after: 60 }
+                alignment: SIDE, bidirectional: isArabic, spacing: { after: 60 }
             }));
             children.push(new Paragraph({
                 children: [new TextRun({ text: `${L.currency}: ${data.currencyCode} (${data.currencySymbol})`, size: 22, font: FONT })],
-                alignment: start(), spacing: { after: 60 }
+                alignment: SIDE, bidirectional: isArabic, spacing: { after: 60 }
             }));
             children.push(new Paragraph({
                 children: [new TextRun({ text: `${L.trainees}: ${data.trainees}  |  ${L.duration}: ${data.duration}`, size: 22, font: FONT })],
-                alignment: start(), spacing: { after: 60 }
+                alignment: SIDE, bidirectional: isArabic, spacing: { after: 60 }
             }));
             children.push(new Paragraph({
                 children: [new TextRun({ text: `${L.trainers}: ${data.trainers}  |  ${L.cofacilitators}: ${data.cofacilitators}`, size: 22, font: FONT })],
-                alignment: start(), spacing: { after: 60 }
+                alignment: SIDE, bidirectional: isArabic, spacing: { after: 60 }
             }));
             if (data.trainerPeriod === 'night') {
                 children.push(new Paragraph({
                     children: [new TextRun({ text: `${L.trainerNights}: ${data.trainerNights}`, size: 22, font: FONT })],
-                    alignment: start(), spacing: { after: 60 }
+                    alignment: SIDE, bidirectional: isArabic, spacing: { after: 60 }
                 }));
             }
             if (data.allowancePeriod === 'night') {
                 children.push(new Paragraph({
                     children: [new TextRun({ text: `${L.allowanceNights}: ${data.allowanceNights}`, size: 22, font: FONT })],
-                    alignment: start(), spacing: { after: 60 }
+                    alignment: SIDE, bidirectional: isArabic, spacing: { after: 60 }
                 }));
             }
 
@@ -1453,7 +1535,10 @@
             const cellBorders = { top: bdr(), bottom: bdr(), left: bdr(), right: bdr() };
 
             const headerCell = (text, widthPct) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: 'FFFFFF', font: FONT, size: 22 })], alignment: AlignmentType.CENTER })],
+                children: [new Paragraph({
+                    children: [new TextRun({ text, bold: true, color: 'FFFFFF', font: FONT, size: 22 })],
+                    alignment: AlignmentType.CENTER, bidirectional: isArabic
+                })],
                 width: { size: Math.round(TABLE_W * widthPct), type: WidthType.DXA },
                 shading: { type: ShadingType.CLEAR, fill: COLOR_PRIMARY },
                 margins: { top: 60, bottom: 60, left: 80, right: 80 },
@@ -1461,14 +1546,20 @@
                 verticalAlign: 'center'
             });
             const labelCell = (text, opts) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text, font: FONT, size: 22, bold: !!(opts && opts.bold), color: (opts && opts.color) || undefined })], alignment: start() })],
+                children: [new Paragraph({
+                    children: [new TextRun({ text, font: FONT, size: 22, bold: !!(opts && opts.bold), color: (opts && opts.color) || undefined })],
+                    alignment: SIDE, bidirectional: isArabic
+                })],
                 width: { size: Math.round(TABLE_W * 0.7), type: WidthType.DXA },
                 shading: (opts && opts.fill) ? { type: ShadingType.CLEAR, fill: opts.fill } : undefined,
                 margins: { top: 50, bottom: 50, left: 80, right: 80 },
                 borders: cellBorders
             });
             const valueCell = (text, opts) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: String(text), font: FONT, size: 22, bold: !!(opts && opts.bold), color: (opts && opts.color) || undefined })], alignment: AlignmentType.CENTER })],
+                children: [new Paragraph({
+                    children: [new TextRun({ text: String(text), font: FONT, size: 22, bold: !!(opts && opts.bold), color: (opts && opts.color) || undefined })],
+                    alignment: AlignmentType.CENTER, bidirectional: isArabic
+                })],
                 width: { size: Math.round(TABLE_W * 0.3), type: WidthType.DXA },
                 shading: (opts && opts.fill) ? { type: ShadingType.CLEAR, fill: opts.fill } : undefined,
                 margins: { top: 50, bottom: 50, left: 60, right: 60 },
@@ -1503,7 +1594,16 @@
             rows.push(new TableRow({ children: [labelCell(L.totalCost, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' }), valueCell(`${data.currencySymbol}${data.totalCost.toFixed(2)}`, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' })] }));
             rows.push(new TableRow({ children: [labelCell(L.costPerTrainee, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' }), valueCell(`${data.currencySymbol}${data.costPerTrainee.toFixed(2)}`, { bold: true, fill: COLOR_ACCENT, color: 'FFFFFF' })] }));
 
-            children.push(new Table({ rows, width: { size: TABLE_W, type: WidthType.DXA }, layout: 'fixed' }));
+            // visuallyRightToLeft set explicitly here, on the Table
+            // itself — this is the piece that was missing across two
+            // earlier attempts. Text alignment inside a cell means
+            // nothing if the table's own grid never flips direction.
+            children.push(new Table({
+                rows,
+                width: { size: TABLE_W, type: WidthType.DXA },
+                layout: 'fixed',
+                visuallyRightToLeft: isArabic
+            }));
 
             const doc = new Document({
                 styles: { default: { document: { run: { font: FONT } } } },
@@ -1618,12 +1718,232 @@
         syncRadioButtons('trainer-period', 'trainer-period-ar');
         syncRadioButtons('allowance-period', 'allowance-period-ar');
         
+        // ============================================================
+        // PROJECT FILE (.json) — save / import / clear
+        //
+        // The three export formats above are one-way: a PDF, a workbook
+        // or a .docx is a finished document, and nothing in it can be
+        // loaded back into the calculator. That made every costing a
+        // dead end — reopening last quarter's carpentry workshop meant
+        // retyping all twenty-odd fields. This section stores the INPUT
+        // state (not the computed totals, which are re-derived on load)
+        // in a small JSON file the user can archive alongside the
+        // exports and reopen months later to edit.
+        //
+        // Only the English ids are listed: every field exists as a pair
+        // (`venue` / `venue-ar`) kept in step by syncInputs(), so the
+        // English id is the natural key and both halves are written on
+        // import. This also keeps the file language-neutral — a project
+        // saved from the Arabic side opens fine on the English side.
+        // ============================================================
+
+        const PROJECT_FIELDS = [
+            'calculation-date', 'currency',
+            'trainees', 'duration', 'trainers', 'cofacilitators',
+            'venue', 'trainer', 'trainer-nights', 'cofacilitator',
+            'equipment', 'printing', 'catering', 'management',
+            'materials', 'tools', 'consumables',
+            'allowance', 'allowance-nights', 'transport', 'certification'
+        ];
+
+        // name = the English radio group, arName = its Arabic twin.
+        const PROJECT_RADIOS = [
+            { key: 'trainerPeriod',   name: 'trainer-period',   arName: 'trainer-period-ar' },
+            { key: 'allowancePeriod', name: 'allowance-period', arName: 'allowance-period-ar' }
+        ];
+
+        function setFieldPair(id, value) {
+            const en = document.getElementById(id);
+            const ar = document.getElementById(id + '-ar');
+            if (en) en.value = value;
+            if (ar) ar.value = value;
+        }
+
+        // The two "Number of Nights" boxes are shown/hidden by change
+        // events on their radios. Setting .checked from code fires no
+        // event, so after any programmatic state change (import, clear)
+        // their visibility has to be re-derived by hand or the box stays
+        // open on a day-rate project — or hidden on a night-rate one.
+        function refreshNightVisibility() {
+            const pairs = [
+                ['trainer-per-night',    'trainer-nights-container',    'trainer-nights-container-ar'],
+                ['allowance-per-night',  'allowance-nights-container',  'allowance-nights-container-ar']
+            ];
+            pairs.forEach(([radioId, enBox, arBox]) => {
+                const show = document.getElementById(radioId).checked ? 'block' : 'none';
+                document.getElementById(enBox).style.display = show;
+                document.getElementById(arBox).style.display = show;
+            });
+        }
+
+        function hideResults() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('results-ar').style.display = 'none';
+        }
+
+        // ── Save ────────────────────────────────────────────────────
+        function saveProject(isArabic = false) {
+            const project = {
+                tool: 'Training Cost Calculator',
+                formatVersion: 1,
+                savedAt: new Date().toISOString(),
+                fields: {},
+                radios: {}
+            };
+
+            PROJECT_FIELDS.forEach(id => {
+                const el = document.getElementById(id);
+                project.fields[id] = el ? el.value : '';
+            });
+            PROJECT_RADIOS.forEach(r => {
+                const checked = document.querySelector(`input[name="${r.name}"]:checked`);
+                project.radios[r.key] = checked ? checked.value : 'day';
+            });
+
+            const blob = new Blob([JSON.stringify(project, null, 2)],
+                                  { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const stamp = (document.getElementById('calculation-date').value ||
+                           new Date().toISOString().split('T')[0]);
+            a.href = url;
+            a.download = `Training_Cost_${stamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ── Import ──────────────────────────────────────────────────
+        // One hidden <input type="file"> serves both toolbars; the click
+        // that opened it records the language so the messages afterwards
+        // match the interface the user is actually looking at.
+        let importRequestedInArabic = false;
+
+        function triggerImport(isArabic = false) {
+            importRequestedInArabic = isArabic;
+            const picker = document.getElementById('jsonFileInput');
+            picker.value = '';   // so re-picking the same file still fires change
+            picker.click();
+        }
+
+        document.getElementById('jsonFileInput').addEventListener('change', function (e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const isArabic = importRequestedInArabic;
+
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                let project;
+                try {
+                    project = JSON.parse(ev.target.result);
+                } catch (err) {
+                    alert(isArabic
+                        ? 'تعذّر قراءة الملف: المحتوى ليس بصيغة JSON صالحة.'
+                        : 'Could not read the file: it is not valid JSON.');
+                    return;
+                }
+                if (!project || typeof project.fields !== 'object') {
+                    alert(isArabic
+                        ? 'هذا الملف لا يبدو ملف مشروع صادراً عن حاسبة تكلفة التدريب.'
+                        : 'This does not look like a Training Cost Calculator project file.');
+                    return;
+                }
+
+                // Fields first, then radios, then the derived UI state.
+                PROJECT_FIELDS.forEach(id => {
+                    if (Object.prototype.hasOwnProperty.call(project.fields, id)) {
+                        setFieldPair(id, project.fields[id]);
+                    }
+                });
+
+                PROJECT_RADIOS.forEach(r => {
+                    const value = project.radios && project.radios[r.key] === 'night' ? 'night' : 'day';
+                    const en = document.querySelector(`input[name="${r.name}"][value="${value}"]`);
+                    const ar = document.querySelector(`input[name="${r.arName}"][value="${value}"]`);
+                    if (en) en.checked = true;
+                    if (ar) ar.checked = true;
+                });
+
+                refreshNightVisibility();
+                updateCurrencyDisplay();
+
+                // Recalculate straight away when the imported file has
+                // the two fields the arithmetic requires, so the user
+                // lands on a filled results table rather than a form
+                // that looks restored but shows nothing.
+                hideResults();
+                const trainees = parseInt(document.getElementById('trainees').value);
+                const duration = parseInt(document.getElementById('duration').value);
+                if (trainees >= 1 && duration >= 1) {
+                    document.getElementById(isArabic ? 'calculate-ar' : 'calculate').click();
+                }
+
+                alert(isArabic
+                    ? 'تم استيراد الملف بنجاح. يمكنك الآن التعديل وإعادة الحساب.'
+                    : 'Project imported successfully. You can now edit and recalculate.');
+            };
+            reader.readAsText(file);
+        });
+
+        // ── Clear all ───────────────────────────────────────────────
+        // Empties every tab and every field above the tabs, and returns
+        // the defaults (1 trainer, 0 co-facilitators, per-day rates,
+        // today's date) rather than leaving blanks that would fail
+        // validation. Confirmed first: this is the one irreversible
+        // action in the toolbar.
+        function clearAllFields(isArabic = false) {
+            const ok = confirm(isArabic
+                ? 'سيتم تفريغ جميع الحقول في كل التبويبات. هل تريد المتابعة؟'
+                : 'This will clear every field in all tabs. Continue?');
+            if (!ok) return;
+
+            PROJECT_FIELDS.forEach(id => {
+                if (id === 'calculation-date' || id === 'currency') return;
+                setFieldPair(id, '');
+            });
+
+            setFieldPair('trainers', '1');
+            setFieldPair('cofacilitators', '0');
+
+            document.getElementById('currency').value = 'USD';
+            document.getElementById('currency-ar').value = 'USD';
+
+            const today = new Date().toISOString().split('T')[0];
+            setFieldPair('calculation-date', today);
+
+            ['trainer-per-day', 'trainer-per-day-ar',
+             'allowance-per-day', 'allowance-per-day-ar'].forEach(id => {
+                document.getElementById(id).checked = true;
+            });
+
+            refreshNightVisibility();
+            updateCurrencyDisplay();
+            hideResults();
+
+            document.getElementById('cost-table').innerHTML =
+                '<tr><th>Item</th><th>Cost</th></tr>';
+            document.getElementById('cost-table-ar').innerHTML =
+                '<tr><th>البند</th><th>التكلفة</th></tr>';
+            document.getElementById('total-cost').textContent = '0';
+            document.getElementById('cost-per-trainee').textContent = '0';
+            document.getElementById('total-cost-ar').textContent = '0';
+            document.getElementById('cost-per-trainee-ar').textContent = '0';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Keep the toolbar height measurement honest: the bar now holds
+        // three more buttons per language, so it wraps to a second row
+        // sooner on narrow screens.
+        window.addEventListener('load', positionToolbars);
+
         // Initialize currency display
         updateCurrencyDisplay();
     </script>
 
     <footer class="copyright">
-        &copy; 2026 Husham Jawad. All rights reserved. (Version 4.3)
+        &copy; 2026 Husham Jawad. All rights reserved. (Version 4.5)
     </footer>
     <div class="disclaimer">
         Disclaimer: This calculator is provided for informational purposes only. Users should verify all calculations according to their organization's specific policies and procedures. The creator does not assume any liability for errors or inaccuracies.

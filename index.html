@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TVET Engineering Tools - Master Interface</title>
+    <link rel="preload" href="fonts/Cairo.woff2" as="font" type="font/woff2" crossorigin>
     <style>
+        /* Self-hosted variable font. One file covers every weight from 200 to
+           1000, so no Google Fonts request and no offline breakage. */
+        @font-face {
+            font-family: 'Cairo';
+            src: url('fonts/Cairo.woff2') format('woff2-variations'),
+                 url('fonts/Cairo.woff2') format('woff2');
+            font-weight: 200 1000;
+            font-style: normal;
+            font-display: swap;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,7 +24,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -438,14 +450,93 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* ================= Bilingual support (AR / EN) ================= */
+
+        /* Arabic typography: Cairo, with system Arabic-capable fallbacks */
+        html[lang="ar"] body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, 'Dubai', 'Noto Naskh Arabic', Arial, sans-serif;
+        }
+
+        html[lang="ar"] h1 {
+            letter-spacing: 0;
+            line-height: 1.35;
+            padding-bottom: 6px;
+        }
+
+        html[lang="ar"] .tool-description {
+            line-height: 1.75;
+        }
+
+        /* Directional glyphs (arrows) mirror in RTL */
+        html[dir="rtl"] .nav-arrow {
+            display: inline-block;
+            transform: scaleX(-1);
+        }
+
+        /* Language switch: fixed on the side opposite the navigation bar,
+           so it never collides with it and stays reachable in every view. */
+        .lang-switch {
+            position: fixed;
+            top: 12px;
+            inset-inline-end: 12px;
+            z-index: 1004;
+            height: 48px;
+            padding: 0 18px;
+            border-radius: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.45);
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.92), rgba(118, 75, 162, 0.92));
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: white;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease;
+        }
+
+        .lang-switch:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+        }
+
+        .lang-switch:focus-visible {
+            outline: 3px solid #ffd166;
+            outline-offset: 2px;
+        }
+
+        .lang-switch.dimmed {
+            opacity: 0.28;
+        }
+
+        .lang-switch.collapsed {
+            opacity: 0;
+            transform: translateY(-80px);
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .lang-switch {
+                height: 44px;
+                padding: 0 14px;
+                font-size: 0.85rem;
+                top: 8px;
+                inset-inline-end: 8px;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Main Landing Page -->
     <div class="main-container" id="mainPage">
         <div class="header-section">
-            <h1>TVET Engineering Tools</h1>
-            <p class="subtitle">🎯 Master Interface - Professional Tools for Training & Education Management</p>
+            <h1 id="pageTitle">TVET Engineering Tools</h1>
+            <p class="subtitle" id="pageSubtitle">🎯 Master Interface - Professional Tools for Training &amp; Education Management</p>
         </div>
 
         <div class="tools-grid">
@@ -531,20 +622,26 @@
         </div>
 
         <div class="footer">
-            <p class="copyright">&copy; 2026 Husham Jawad. All rights reserved.</p>
-            <p class="version">TVET Engineering Tools - Master Interface v4.0</p>
+            <p class="copyright" id="copyrightText">&copy; 2026 Husham Jawad. All rights reserved.</p>
+            <p class="version" id="versionText">TVET Engineering Tools - Master Interface v4.1</p>
         </div>
     </div>
+
+    <!-- Language switch (always visible, both on the landing page and inside a tool) -->
+    <button class="lang-switch" id="langSwitch" onclick="toggleLanguage()" title="Switch language (L)">
+        <span aria-hidden="true">🌐</span>
+        <span id="langSwitchLabel">العربية</span>
+    </button>
 
     <!-- Persistent Top Navigation Bar -->
     <div class="nav-bar" id="navBar">
         <button class="nav-btn" id="backBtn" onclick="goBack()" title="Back">
-            <span>←</span>
-            <span class="label">Back</span>
+            <span class="nav-arrow">←</span>
+            <span class="label" id="backLabel">Back</span>
         </button>
         <button class="nav-btn" id="forwardBtn" onclick="goForward()" title="Forward">
-            <span class="label">Forward</span>
-            <span>→</span>
+            <span class="label" id="forwardLabel">Forward</span>
+            <span class="nav-arrow">→</span>
         </button>
         <button class="nav-btn icon-only" id="homeBtn" onclick="backToMain()" title="All tools">🏠</button>
         <span class="nav-divider"></span>
@@ -562,7 +659,7 @@
     <div class="tool-view" id="workshopView">
         <div class="loading" id="workshopLoading">
             <div class="spinner"></div>
-            <p>Loading Workshop Agenda Manager...</p>
+            <p id="workshopLoadingText"></p>
         </div>
         <iframe id="workshopFrame" class="iframe-container"></iframe>
     </div>
@@ -571,7 +668,7 @@
     <div class="tool-view" id="calculatorView">
         <div class="loading" id="calculatorLoading">
             <div class="spinner"></div>
-            <p>Loading Training Cost Calculator...</p>
+            <p id="calculatorLoadingText"></p>
         </div>
         <iframe id="calculatorFrame" class="iframe-container"></iframe>
     </div>
@@ -580,7 +677,7 @@
     <div class="tool-view" id="nqfView">
         <div class="loading" id="nqfLoading">
             <div class="spinner"></div>
-            <p>Loading National Qualification Framework Map...</p>
+            <p id="nqfLoadingText"></p>
         </div>
         <iframe id="nqfFrame" class="iframe-container"></iframe>
     </div>
@@ -589,7 +686,7 @@
     <div class="tool-view" id="linkedinView">
         <div class="loading" id="linkedinLoading">
             <div class="spinner"></div>
-            <p>Loading LinkedIn Post Editor...</p>
+            <p id="linkedinLoadingText"></p>
         </div>
         <iframe id="linkedinFrame" class="iframe-container"></iframe>
     </div>
@@ -598,7 +695,7 @@
     <div class="tool-view" id="dacumView">
         <div class="loading" id="dacumLoading">
             <div class="spinner"></div>
-            <p>Loading DACUM Lite...</p>
+            <p id="dacumLoadingText"></p>
         </div>
         <iframe id="dacumFrame" class="iframe-container"></iframe>
     </div>
@@ -607,7 +704,7 @@
     <div class="tool-view" id="qrconverterView">
         <div class="loading" id="qrconverterLoading">
             <div class="spinner"></div>
-            <p>Loading Link to QR Converter...</p>
+            <p id="qrconverterLoadingText"></p>
         </div>
         <iframe id="qrconverterFrame" class="iframe-container"></iframe>
     </div>
@@ -616,7 +713,7 @@
     <div class="tool-view" id="rbmproposalView">
         <div class="loading" id="rbmproposalLoading">
             <div class="spinner"></div>
-            <p>Loading RBM Project Proposal Tool...</p>
+            <p id="rbmproposalLoadingText"></p>
         </div>
         <iframe id="rbmproposalFrame" class="iframe-container"></iframe>
     </div>
@@ -625,7 +722,7 @@
     <div class="tool-view" id="trainingresourcesView">
         <div class="loading" id="trainingresourcesLoading">
             <div class="spinner"></div>
-            <p>Loading Training Resources Management...</p>
+            <p id="trainingresourcesLoadingText"></p>
         </div>
         <iframe id="trainingresourcesFrame" class="iframe-container"></iframe>
     </div>
@@ -634,7 +731,7 @@
     <div class="tool-view" id="screenrecorderView">
         <div class="loading" id="screenrecorderLoading">
             <div class="spinner"></div>
-            <p>Loading Screen Recorder...</p>
+            <p id="screenrecorderLoadingText"></p>
         </div>
         <iframe id="screenrecorderFrame" class="iframe-container"></iframe>
     </div>
@@ -643,7 +740,7 @@
     <div class="tool-view" id="icebreakerView">
         <div class="loading" id="icebreakerLoading">
             <div class="spinner"></div>
-            <p>Loading Ice Breaker Games...</p>
+            <p id="icebreakerLoadingText"></p>
         </div>
         <iframe id="icebreakerFrame" class="iframe-container"></iframe>
     </div>
@@ -666,19 +763,156 @@
             icebreaker: 'Ice_breaker_games.html'
         };
 
-        // Display titles shown in the top navigation bar
-        const toolTitles = {
-            workshop: 'Workshop Agenda Manager',
-            calculator: 'Training Cost Calculator',
-            nqf: 'National Qualification Framework',
-            linkedin: 'LinkedIn Post Editor',
-            dacum: 'DACUM Lite',
-            qrconverter: 'Link to QR Converter',
-            rbmproposal: 'RBM Project Proposal Tool',
-            trainingresources: 'Training Resources Management',
-            screenrecorder: 'Screen Recorder',
-            icebreaker: 'Ice Breaker Games'
+        /* =====================================================================
+           BILINGUAL DICTIONARY (EN / AR)
+           To add or edit wording, change the strings below only — no other part
+           of the file needs to be touched.
+           ===================================================================== */
+        const I18N = {
+            en: {
+                dir: 'ltr',
+                docTitle: 'TVET Engineering Tools - Master Interface',
+                pageTitle: 'TVET Engineering Tools',
+                pageSubtitle: '\uD83C\uDFAF Master Interface - Professional Tools for Training & Education Management',
+                openTool: 'Open Tool \u2192',
+                loading: 'Loading {tool}...',
+                copyright: '\u00A9 2026 Husham Jawad. All rights reserved.',
+                version: 'TVET Engineering Tools - Master Interface v4.1',
+                back: 'Back',
+                forward: 'Forward',
+                homeTitle: 'All tools',
+                fullscreenTitle: 'Full screen (F)',
+                newTabTitle: 'Open this tool in a new tab',
+                hideBarTitle: 'Hide this bar (H)',
+                showBarTitle: 'Show navigation bar',
+                cardNewTab: 'Open in a new tab',
+                cardNewTabAria: 'Open {tool} in a new tab',
+                langSwitchLabel: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629',
+                langSwitchTitle: 'Switch to Arabic (L)',
+                tools: {
+                    workshop: {
+                        title: 'Workshop Agenda Manager',
+                        desc: 'Create, organize, and export professional workshop agendas with detailed schedules, activities, and participant notes.'
+                    },
+                    calculator: {
+                        title: 'Training Cost Calculator',
+                        desc: 'Calculate comprehensive training costs including venue, materials, trainer fees, and participant allowances with multi-currency support.'
+                    },
+                    nqf: {
+                        title: 'National Qualification Framework',
+                        desc: 'Interactive world map to explore and search National Qualification Frameworks and equivalent sources across countries.'
+                    },
+                    linkedin: {
+                        title: 'LinkedIn Post Editor',
+                        desc: 'Create and format engaging LinkedIn posts with Unicode text styles, emojis, and professional formatting tools.'
+                    },
+                    dacum: {
+                        title: 'DACUM Lite',
+                        desc: 'Build, edit and export occupational analysis charts \u2014 duties, tasks and supporting information \u2014 in Arabic, English or French, with Word and PDF output.'
+                    },
+                    qrconverter: {
+                        title: 'Link to QR Converter',
+                        desc: 'Convert any URL or text into a QR code instantly. Download high-quality QR codes for printing and sharing.'
+                    },
+                    rbmproposal: {
+                        title: 'RBM Project Proposal Tool',
+                        desc: 'Create results-based management project proposals with logical frameworks, indicators, and monitoring plans.'
+                    },
+                    trainingresources: {
+                        title: 'Training Resources Management',
+                        desc: 'Organize and manage training materials, resources, and documentation efficiently in one central location.'
+                    },
+                    screenrecorder: {
+                        title: 'Screen Recorder',
+                        desc: 'Record your screen, webcam, or both for creating training videos, demonstrations, and tutorials.'
+                    },
+                    icebreaker: {
+                        title: 'Ice Breaker Games',
+                        desc: 'A bilingual facilitator toolkit of ice breaker games to energize workshops and training sessions from the very first minute.'
+                    }
+                }
+            },
+            ar: {
+                dir: 'rtl',
+                docTitle: 'أدوات هندسة التعليم والتدريب التقني والمهني - الواجهة الرئيسية',
+                pageTitle: 'أدوات هندسة التعليم والتدريب التقني والمهني',
+                pageSubtitle: '🎯 الواجهة الرئيسية - أدوات احترافية لإدارة التدريب والتعليم',
+                openTool: 'افتح الأداة \u2192',
+                loading: 'جارٍ تحميل {tool} ...',
+                copyright: '\u00A9 2026 هشام جواد. جميع الحقوق محفوظة.',
+                version: 'أدوات هندسة التعليم والتدريب التقني والمهني - الواجهة الرئيسية، الإصدار 4.1',
+                back: 'رجوع',
+                forward: 'تقدّم',
+                homeTitle: 'جميع الأدوات',
+                fullscreenTitle: 'ملء الشاشة (F)',
+                newTabTitle: 'فتح هذه الأداة في تبويب جديد',
+                hideBarTitle: 'إخفاء الشريط (H)',
+                showBarTitle: 'إظهار شريط التنقل',
+                cardNewTab: 'فتح في تبويب جديد',
+                cardNewTabAria: 'فتح {tool} في تبويب جديد',
+                langSwitchLabel: 'English',
+                langSwitchTitle: 'التبديل إلى الإنكليزية (L)',
+                tools: {
+                    workshop: {
+                        title: 'مدير أجندة ورش العمل',
+                        desc: 'إنشاء وتنظيم وتصدير أجندات احترافية لورش العمل، مع جداول زمنية تفصيلية والأنشطة وملاحظات المشاركين.'
+                    },
+                    calculator: {
+                        title: 'حاسبة كلفة التدريب',
+                        desc: 'احتساب كلفة التدريب الشاملة: القاعة والمواد وأتعاب المدربين وبدلات المشاركين، مع دعم عملات متعددة.'
+                    },
+                    nqf: {
+                        title: 'إطار المؤهلات الوطني',
+                        desc: 'خريطة عالم تفاعلية لاستكشاف أطر المؤهلات الوطنية والمصادر المكافئة في مختلف الدول والبحث فيها.'
+                    },
+                    linkedin: {
+                        title: 'محرر منشورات لينكد إن',
+                        desc: 'إنشاء وتنسيق منشورات جذّابة على لينكد إن بأنماط نصوص يونيكود ورموز تعبيرية وأدوات تنسيق احترافية.'
+                    },
+                    dacum: {
+                        title: 'داكم لايت DACUM Lite',
+                        desc: 'إعداد وتحرير وتصدير مخططات تحليل المهنة \u2014 الواجبات والمهام والمعلومات المساندة \u2014 بالعربية أو الإنكليزية أو الفرنسية، مع إخراج بصيغتي Word و PDF.'
+                    },
+                    qrconverter: {
+                        title: 'محوّل الروابط إلى رمز QR',
+                        desc: 'حوّل أي رابط أو نص إلى رمز QR فوراً، مع إمكانية تنزيل رموز عالية الجودة للطباعة والمشاركة.'
+                    },
+                    rbmproposal: {
+                        title: 'أداة إعداد مقترحات المشاريع (RBM)',
+                        desc: 'إعداد مقترحات المشاريع وفق الإدارة المبنية على النتائج، مع الأطر المنطقية والمؤشرات وخطط الرصد والمتابعة.'
+                    },
+                    trainingresources: {
+                        title: 'إدارة الموارد التدريبية',
+                        desc: 'تنظيم وإدارة المواد والموارد التدريبية والوثائق بكفاءة في مكان مركزي واحد.'
+                    },
+                    screenrecorder: {
+                        title: 'مسجّل الشاشة',
+                        desc: 'سجّل شاشتك أو كاميرا الويب أو كليهما لإنتاج فيديوهات تدريبية وعروض توضيحية ودروس تعليمية.'
+                    },
+                    icebreaker: {
+                        title: 'ألعاب كسر الجليد',
+                        desc: 'حقيبة ثنائية اللغة للميسّرين تضم ألعاب كسر الجليد لتنشيط ورش العمل والجلسات التدريبية منذ الدقيقة الأولى.'
+                    }
+                }
+            }
         };
+
+        // Current language. English stays the default on first visit.
+        let currentLang = 'en';
+        try {
+            const savedLang = localStorage.getItem('tvet_lang');
+            if (savedLang === 'ar' || savedLang === 'en') { currentLang = savedLang; }
+        } catch (e) {}
+
+        function t(key) {
+            return I18N[currentLang][key];
+        }
+
+        // Display titles shown in the top navigation bar (localised)
+        function toolTitle(name) {
+            const entry = I18N[currentLang].tools[name];
+            return entry ? entry.title : '';
+        }
 
         const allToolNames = Object.keys(tools);
 
@@ -714,7 +948,7 @@
 
                 toolView.classList.add('active');
                 navBar.classList.add('active');
-                document.getElementById('navTitle').textContent = toolTitles[state] || '';
+                document.getElementById('navTitle').textContent = toolTitle(state);
 
                 if (!iframe.src) {
                     loading.classList.add('active');
@@ -779,6 +1013,7 @@
             const hotspot = document.getElementById('navHotspot');
 
             navBar.classList.toggle('collapsed', barHidden);
+            document.getElementById('langSwitch').classList.toggle('collapsed', onTool && barHidden);
             handle.classList.toggle('active', onTool && barHidden);
             hotspot.classList.toggle('active', onTool && barHidden);
             scheduleDim();
@@ -792,16 +1027,20 @@
 
         function scheduleDim() {
             const navBar = document.getElementById('navBar');
+            const langSwitch = document.getElementById('langSwitch');
             navBar.classList.remove('dimmed');
+            langSwitch.classList.remove('dimmed');
             clearTimeout(dimTimer);
             if (!barHidden && navHistory[navIndex] !== 'main') {
                 dimTimer = setTimeout(function () {
                     navBar.classList.add('dimmed');
+                    langSwitch.classList.add('dimmed');
                 }, 5000);
             }
         }
 
         document.getElementById('navBar').addEventListener('mouseenter', scheduleDim);
+        document.getElementById('langSwitch').addEventListener('mouseenter', scheduleDim);
         document.getElementById('navHotspot').addEventListener('mouseenter', function () {
             setBarHidden(false);
         });
@@ -838,8 +1077,7 @@
             const btn = document.createElement('button');
             btn.className = 'card-newtab';
             btn.textContent = '↗';
-            btn.title = 'Open in a new tab';
-            btn.setAttribute('aria-label', 'Open ' + (toolTitles[match[1]] || 'tool') + ' in a new tab');
+            btn.dataset.tool = match[1];
             btn.onclick = function (e) {
                 e.stopPropagation();
                 openInNewTab(match[1]);
@@ -860,6 +1098,10 @@
                 && !event.ctrlKey && !event.metaKey && !event.altKey) {
                 setBarHidden(!barHidden);
             }
+            if ((event.key === 'l' || event.key === 'L')
+                && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                toggleLanguage();
+            }
         });
 
         // Prevent accidental navigation away
@@ -869,6 +1111,86 @@
                 e.returnValue = '';
             }
         });
+
+        /* =====================================================================
+           LANGUAGE ENGINE
+           applyLanguage() repaints every piece of shell text and flips the page
+           direction. It is safe to call at any time, in any view.
+           ===================================================================== */
+        function applyLanguage() {
+            const L = I18N[currentLang];
+
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = L.dir;
+            document.title = L.docTitle;
+
+            document.getElementById('pageTitle').textContent = L.pageTitle;
+            document.getElementById('pageSubtitle').textContent = L.pageSubtitle;
+            document.getElementById('copyrightText').textContent = L.copyright;
+            document.getElementById('versionText').textContent = L.version;
+
+            // Tool cards: title, description and button
+            document.querySelectorAll('.tool-card').forEach(function (card) {
+                const match = /openTool\('([^']+)'\)/.exec(card.getAttribute('onclick') || '');
+                if (!match) { return; }
+                const entry = L.tools[match[1]];
+                if (!entry) { return; }
+                const titleEl = card.querySelector('.tool-title');
+                const descEl = card.querySelector('.tool-description');
+                const btnEl = card.querySelector('.tool-button');
+                if (titleEl) { titleEl.textContent = entry.title; }
+                if (descEl) { descEl.textContent = entry.desc; }
+                if (btnEl) { btnEl.textContent = L.openTool; }
+            });
+
+            // "Open in a new tab" badges on the cards
+            document.querySelectorAll('.card-newtab').forEach(function (btn) {
+                const name = btn.dataset.tool;
+                const entry = L.tools[name];
+                btn.title = L.cardNewTab;
+                btn.setAttribute('aria-label',
+                    L.cardNewTabAria.replace('{tool}', entry ? entry.title : ''));
+            });
+
+            // Loading messages
+            allToolNames.forEach(function (name) {
+                const el = document.getElementById(name + 'LoadingText');
+                if (el) { el.textContent = L.loading.replace('{tool}', toolTitle(name)); }
+            });
+
+            // Floating navigation bar
+            document.getElementById('backLabel').textContent = L.back;
+            document.getElementById('forwardLabel').textContent = L.forward;
+            document.getElementById('backBtn').title = L.back;
+            document.getElementById('forwardBtn').title = L.forward;
+            document.getElementById('homeBtn').title = L.homeTitle;
+            document.getElementById('fullscreenBtn').title = L.fullscreenTitle;
+            document.getElementById('newTabBtn').title = L.newTabTitle;
+            document.getElementById('hideBarBtn').title = L.hideBarTitle;
+            document.getElementById('navHandle').title = L.showBarTitle;
+            document.getElementById('navTitle').textContent =
+                navHistory[navIndex] === 'main' ? '' : toolTitle(navHistory[navIndex]);
+
+            // The switch itself always offers the *other* language
+            document.getElementById('langSwitchLabel').textContent = L.langSwitchLabel;
+            document.getElementById('langSwitch').title = L.langSwitchTitle;
+        }
+
+        function setLanguage(lang) {
+            if (lang !== 'ar' && lang !== 'en') { return; }
+            currentLang = lang;
+            try { localStorage.setItem('tvet_lang', lang); } catch (e) {}
+            applyLanguage();
+            scheduleDim();
+        }
+
+        function toggleLanguage() {
+            setLanguage(currentLang === 'en' ? 'ar' : 'en');
+        }
+
+        // First paint
+        applyLanguage();
+        renderCurrentState();
     </script>
 </body>
 </html>

@@ -269,17 +269,32 @@
             border-color: #e08b84;
         }
 
-        /* ── Table toolbar ───────────────────────────────────────
-           margin-inline-start:auto pushes the button to the END of the
-           row — the right in English, the left in Arabic — which is the
-           side the Delete column sits on in both directions. */
-        .table-toolbar {
+        /* ── Clear-all slot ──────────────────────────────────────
+           margin-inline-start:auto pushes the button to the END of its
+           column — the right in English, the left in Arabic — which is
+           the side the Delete column sits on in both directions, so the
+           button points at the thing it acts on. */
+        .clear-slot {
             display: flex;
-            align-items: center;
-            margin-bottom: 8px;
+            flex-direction: column;
+            align-items: flex-start;
         }
 
-        .table-toolbar .btn { margin-inline-start: auto; }
+        .clear-slot .btn { margin-inline-start: auto; }
+
+        /* Stacked single column below 700px: the reserved empty label
+           would then put a blank line above the button for no reason. */
+        @media (max-width: 700px) {
+            /* The header grid held two columns at every width, so on a
+               phone each field got half of an already narrow screen.
+               Stacking is also what makes the rule below correct: with
+               one column the reserved empty label has nothing to align
+               against and would just add a blank line. */
+            .header-section { grid-template-columns: 1fr; gap: 0; }
+            .clear-slot label { display: none; }
+            .clear-slot { align-items: stretch; }
+            .clear-slot .btn { margin-inline-start: 0; justify-content: center; }
+        }
 
         .table-container {
             overflow-x: auto;
@@ -737,14 +752,23 @@ html[dir="rtl"] .app-footer details.disclaimer-box[open] > summary::after {
                     <label data-i18n="lblDate">Date:</label>
                     <input type="date" id="prepDate">
                 </div>
+                <!-- Third row of column two, opposite the currency field in
+                     column one. Column two ran one field shorter than column
+                     one, leaving a band of empty page directly above the
+                     table; this fills it and puts the button on the same
+                     line as the currency instead of on a strip of its own.
+                     The empty <label> is not decorative — it reserves the
+                     same 5px+line-height the other rows spend on their
+                     label, which is what makes the button baseline line up
+                     with the select beside it. -->
+                <div class="form-group clear-slot">
+                    <label aria-hidden="true">&nbsp;</label>
+                    <button class="btn btn-danger" onclick="clearAllRows()">
+                        <svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 7h8l-.8 9.1a1 1 0 0 1-1 .9H7.8a1 1 0 0 1-1-.9z"/><path d="M4.5 5h11M8 5V3.6a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 1 .6.6V5" class="stroke2"/></svg>
+                        <span data-i18n="btnClearAll">Clear All</span>
+                    </button>
+                </div>
             </div>
-        </div>
-
-        <div class="table-toolbar">
-            <button class="btn btn-danger" onclick="clearAllRows()">
-                <svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 7h8l-.8 9.1a1 1 0 0 1-1 .9H7.8a1 1 0 0 1-1-.9z"/><path d="M4.5 5h11M8 5V3.6a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 1 .6.6V5" class="stroke2"/></svg>
-                <span data-i18n="btnClearAll">Clear All</span>
-            </button>
         </div>
 
         <div class="table-container">

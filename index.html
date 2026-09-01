@@ -1,18 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TVET Engineering Tools - Master Interface</title>
-    <link rel="preload" href="fonts/Cairo.woff2" as="font" type="font/woff2" crossorigin>
+    <title>Training Resources Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
     <style>
-        /* Self-hosted variable font. One file covers every weight from 200 to
-           1000, so no Google Fonts request and no offline breakage. */
+        /* Cairo is a VARIABLE font: one file carries the whole weight
+           axis, so `font-weight: 100 900` declares the range instead of
+           registering a single weight. Without that range the browser
+           gets one static instance and synthesises bold by smearing the
+           glyphs — which on Arabic looks like a rendering fault rather
+           than a font choice. `font-display: swap` keeps the interface
+           readable in the fallback face while the file loads. */
         @font-face {
             font-family: 'Cairo';
             src: url('fonts/Cairo.woff2') format('woff2-variations'),
                  url('fonts/Cairo.woff2') format('woff2');
-            font-weight: 200 1000;
+            font-weight: 100 900;
             font-style: normal;
             font-display: swap;
         }
@@ -24,1173 +29,1647 @@
         }
 
         body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: Arial, sans-serif;
             padding: 20px;
+            background-color: #f5f5f5;
+            direction: ltr;
         }
 
-        .main-container {
-            width: 100%;
+        /* ── Arabic mode ──────────────────────────────────────────
+           Driven by dir="rtl" on <html> rather than a class, so the
+           browser flips the whole layout — table column order, list
+           markers, scrollbar side — instead of this stylesheet having
+           to mirror each one by hand.
+
+           Arial stays in the stack behind Cairo: it ships everywhere
+           and has full Arabic coverage, so a failed font fetch (offline,
+           wrong path, GitHub Pages hiccup) degrades to readable Arabic
+           rather than to boxes. */
+        html[dir="rtl"] body,
+        html[dir="rtl"] input,
+        html[dir="rtl"] textarea,
+        html[dir="rtl"] button,
+        html[dir="rtl"] select {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+        }
+
+        html[dir="rtl"] body { direction: rtl; }
+
+        /* Numeric fields stay LTR in both languages. An amount typed
+           into an RTL input has its minus sign and decimal point pushed
+           to the wrong end, which silently changes what the reader
+           thinks the number is. */
+        input[type="number"],
+        input[type="date"] {
+            direction: ltr;
+            text-align: start;
+        }
+
+        html[dir="rtl"] th,
+        html[dir="rtl"] td,
+        html[dir="rtl"] label { text-align: right; }
+
+        /* A segmented pair inside the toolbar: one capsule split by a
+           single divider, so it reads as one control with two states
+           rather than two competing buttons. */
+        .lang-switch {
+            display: inline-flex;
+            align-items: stretch;
+            border: 1px solid #d8dade;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #f1f2f4;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+        }
+
+        .lang-switch button {
+            padding: 9px 15px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #5f6368;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        /* The divider sits on the second child, so it works whichever
+           order the buttons end up in under RTL. */
+        .lang-switch button + button {
+            border-inline-start: 1px solid #d8dade;
+        }
+
+        .lang-switch button:hover { background: #e4e6e9; color: #3c4043; }
+
+        .lang-switch button.active {
+            background: #6f42c1;
+            border-color: #6f42c1;
+            color: #fff;
+        }
+
+        .lang-switch button:focus-visible {
+            outline: 2px solid #6f42c1;
+            outline-offset: -2px;
+        }
+
+        .container {
             max-width: 1400px;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 30px;
-            padding: 60px 40px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .header-section {
-            margin-bottom: 60px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         h1 {
-            font-size: 3rem;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-            font-weight: 800;
-            letter-spacing: -1px;
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
         }
 
-        .subtitle {
-            font-size: 1.2rem;
-            color: #666;
-            font-weight: 400;
-        }
-
-        .tools-grid {
+        .header-section {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
-            padding: 0 20px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .tool-card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.4s ease;
-            cursor: pointer;
-            border: 3px solid transparent;
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* ── Notifications ───────────────────────────────────────
+           Two mechanisms, deliberately distinct:
+
+           A TOAST reports something that already happened. It must not
+           interrupt, so it never takes focus and never needs dismissing.
+
+           A CONFIRM asks before something irreversible happens. It MUST
+           interrupt, and it must not be a native confirm(): that dialog
+           cannot be translated, renders LTR with Arabic text inside it,
+           and blocks the whole page synchronously. Every destructive
+           action in this tool goes through the modal below. */
+        .toast-stack {
+            position: fixed;
+            top: 76px;
+            inset-inline-end: 16px;
+            z-index: 2000;
             display: flex;
             flex-direction: column;
-            align-items: center;
-        }
-
-        .tool-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            border-color: #667eea;
-        }
-
-        .tool-icon {
-            width: 140px;
-            height: 140px;
-            margin: 0 auto 20px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4rem;
-            color: white;
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-            transition: all 0.4s ease;
-        }
-
-        .tool-card:hover .tool-icon {
-            transform: scale(1.08) rotate(3deg);
-            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.6);
-        }
-
-        .tool-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 12px;
-            text-align: center;
-        }
-
-        .tool-description {
-            font-size: 0.95rem;
-            color: #666;
-            line-height: 1.5;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .tool-button {
-            display: inline-block;
-            padding: 12px 30px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .tool-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
-        }
-
-        .tool-view {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            z-index: 1000;
-        }
-
-        .tool-view.active {
-            display: block;
-        }
-
-        /* ---------- Floating navigation overlay ---------- */
-        .nav-bar {
-            position: fixed;
-            top: 12px;
-            inset-inline-start: 12px;
-            z-index: 1002;
-            height: 48px;
-            background: linear-gradient(45deg, rgba(102, 126, 234, 0.92), rgba(118, 75, 162, 0.92));
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-radius: 50px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-            display: none;
-            align-items: center;
-            gap: 6px;
-            padding: 0 10px;
-            max-width: calc(100% - 24px);
-            transition: opacity 0.25s ease, transform 0.25s ease;
-        }
-
-        .nav-bar.active {
-            display: flex;
-        }
-
-        /* Faded while the user works inside the tool; wakes up on hover */
-        .nav-bar.dimmed {
-            opacity: 0.28;
-        }
-
-        .nav-bar:hover {
-            opacity: 1;
-        }
-
-        .nav-bar.collapsed {
-            opacity: 0;
-            transform: translateY(-80px);
+            gap: 8px;
             pointer-events: none;
         }
 
-        .nav-btn {
-            padding: 8px 14px;
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s ease;
+        .toast {
             display: flex;
             align-items: center;
-            gap: 6px;
-            white-space: nowrap;
+            gap: 10px;
+            min-width: 240px;
+            max-width: min(380px, 90vw);
+            padding: 11px 15px;
+            border-radius: 10px;
+            border: 1px solid #d8dade;
+            background: #fff;
+            color: #3c4043;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 6px 18px rgba(16, 24, 40, 0.12);
+            /* Slides in from the side the language reads from, so it
+               enters the page rather than crossing it. */
+            animation: toast-in 0.18s ease-out;
+            pointer-events: auto;
         }
 
-        .nav-btn.icon-only {
-            padding: 8px 11px;
-            font-size: 1rem;
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .nav-btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
+        .toast.leaving { opacity: 0; transform: translateY(-6px); transition: all 0.18s ease-in; }
+
+        /* Colour on the leading edge only. A fully tinted toast competes
+           with the sheet for attention; a 4px bar carries the same
+           meaning at a fraction of the visual weight. */
+        .toast::before {
+            content: '';
+            width: 4px;
+            align-self: stretch;
+            border-radius: 2px;
+            background: #9aa0a6;
+            flex-shrink: 0;
         }
 
-        .nav-btn:focus-visible,
-        .nav-handle:focus-visible {
-            outline: 3px solid #ffd166;
-            outline-offset: 2px;
-        }
+        .toast.success::before { background: #34a853; }
+        .toast.error::before   { background: #d93025; }
+        .toast.warn::before    { background: #f9ab00; }
 
-        .nav-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .nav-title {
-            color: white;
-            font-weight: 700;
-            font-size: 1rem;
-            margin-inline: 8px 4px;
-            max-width: 32vw;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .nav-divider {
-            width: 1px;
-            height: 24px;
-            background: rgba(255, 255, 255, 0.35);
-            margin: 0 2px;
-        }
-
-        /* Small handle that brings the hidden bar back */
-        .nav-handle {
+        .modal-backdrop {
             position: fixed;
-            top: 12px;
-            inset-inline-start: 12px;
-            z-index: 1003;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            background: linear-gradient(45deg, rgba(102, 126, 234, 0.85), rgba(118, 75, 162, 0.85));
-            color: white;
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: none;
+            inset: 0;
+            z-index: 3000;
+            display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-            opacity: 0.35;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            padding: 20px;
+            background: rgba(16, 24, 40, 0.45);
         }
 
-        .nav-handle.active {
+        .modal-card {
+            width: min(440px, 100%);
+            background: #fff;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 18px 50px rgba(16, 24, 40, 0.28);
+        }
+
+        .modal-card h3 {
+            margin: 0 0 8px;
+            font-size: 17px;
+            color: #202124;
+        }
+
+        .modal-card p {
+            margin: 0 0 18px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #5f6368;
+        }
+
+        .modal-actions {
             display: flex;
+            gap: 10px;
+            justify-content: flex-end;
         }
 
-        .nav-handle:hover {
-            opacity: 1;
-            transform: scale(1.08);
+        .btn-danger {
+            border-color: #f0b3ae;
+            background: linear-gradient(180deg, #fff5f4 0%, #fde8e6 100%);
+            color: #b3261e;
         }
 
-        /* Thin strip along the top edge: hovering it reveals the hidden bar */
-        .nav-hotspot {
-            position: fixed;
-            top: 0;
-            inset-inline-start: 0;
-            width: 320px;
-            height: 8px;
-            z-index: 1003;
-            display: none;
+        .btn-danger:hover {
+            background: linear-gradient(180deg, #fff 0%, #f9d9d6 100%);
+            border-color: #e08b84;
         }
 
-        .nav-hotspot.active {
-            display: block;
+        /* ── Table toolbar ───────────────────────────────────────
+           margin-inline-start:auto pushes the button to the END of the
+           row — the right in English, the left in Arabic — which is the
+           side the Delete column sits on in both directions. */
+        .table-toolbar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
         }
 
-        .card-newtab {
-            position: absolute;
-            top: 12px;
-            inset-inline-end: 12px;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 2px solid #e3e6f5;
-            background: white;
-            color: #667eea;
-            font-size: 0.95rem;
-            cursor: pointer;
-            opacity: 0;
-            transition: all 0.25s ease;
+        .table-toolbar .btn { margin-inline-start: auto; }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
         }
 
-        .tool-card {
-            position: relative;
-        }
-
-        .tool-card:hover .card-newtab,
-        .card-newtab:focus-visible {
-            opacity: 1;
-        }
-
-        .card-newtab:hover {
-            background: #667eea;
-            color: white;
-        }
-
-        .iframe-container {
+        table {
             width: 100%;
-            height: 100vh;
-            margin-top: 0;
-            border: none;
-            overflow: auto;
+            border-collapse: collapse;
+            margin-bottom: 20px;
         }
 
-        iframe {
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+
+        td input[type="text"],
+        td input[type="number"] {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        td textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .image-cell {
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .image-placeholder {
+            width: 113px;
+            height: 113px;
+            border: 2px dashed #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            background-color: #fafafa;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .image-preview {
+            width: 113px;
+            height: 113px;
+            margin: 0 auto 8px;
+            border: 1px solid #ddd;
+        }
+
+        .image-preview img {
             width: 100%;
             height: 100%;
+            object-fit: contain;
+        }
+
+        .btn-add-image {
+            background-color: #9C27B0;
+            color: white;
             border: none;
-        }
-
-        .footer {
-            margin-top: 60px;
-            padding-top: 30px;
-            border-top: 2px solid #e0e0e0;
-        }
-
-        .copyright {
-            font-size: 0.95rem;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .version {
-            font-size: 0.85rem;
-            color: #999;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2.2rem;
-            }
-
-            .subtitle {
-                font-size: 1rem;
-            }
-
-            .tools-grid {
-                grid-template-columns: 1fr;
-                gap: 25px;
-            }
-
-            .tool-icon {
-                width: 120px;
-                height: 120px;
-                font-size: 3.5rem;
-            }
-
-            .tool-title {
-                font-size: 1.3rem;
-            }
-
-            .tool-description {
-                font-size: 0.9rem;
-            }
-
-            .main-container {
-                padding: 30px 20px;
-            }
-
-            .nav-bar {
-                height: 44px;
-                padding: 0 8px;
-                gap: 4px;
-                top: 8px;
-                inset-inline-start: 8px;
-            }
-
-            .nav-btn {
-                padding: 7px 12px;
-                font-size: 0.8rem;
-            }
-
-            .nav-btn span.label {
-                display: none;
-            }
-
-            .nav-title {
-                display: none;
-            }
-
-            .card-newtab {
-                opacity: 1;
-            }
-        }
-
-        /* Loading animation */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .loading.active {
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            width: 113px;
             display: block;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
             margin: 0 auto;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .btn-add-image:hover {
+            background-color: #7B1FA2;
         }
 
-        /* ================= Bilingual support (AR / EN) ================= */
-
-        /* Arabic typography: Cairo, with system Arabic-capable fallbacks */
-        html[lang="ar"] body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, 'Dubai', 'Noto Naskh Arabic', Arial, sans-serif;
-        }
-
-        html[lang="ar"] h1 {
-            letter-spacing: 0;
-            line-height: 1.35;
-            padding-bottom: 6px;
-        }
-
-        html[lang="ar"] .tool-description {
-            line-height: 1.75;
-        }
-
-        /* Directional glyphs (arrows) mirror in RTL */
-        html[dir="rtl"] .nav-arrow {
-            display: inline-block;
-            transform: scaleX(-1);
-        }
-
-        /* Language switch: fixed on the side opposite the navigation bar,
-           so it never collides with it and stays reachable in every view. */
-        .lang-switch {
-            position: fixed;
-            top: 12px;
-            inset-inline-end: 12px;
-            z-index: 1004;
-            height: 48px;
-            padding: 0 18px;
-            border-radius: 50px;
-            border: 2px solid rgba(255, 255, 255, 0.45);
-            background: linear-gradient(45deg, rgba(102, 126, 234, 0.92), rgba(118, 75, 162, 0.92));
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+        .btn-remove-image {
+            background-color: #f44336;
             color: white;
-            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 18px;
+            width: 113px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .btn-remove-image:hover {
+            background-color: #d32f2f;
+        }
+
+        .btn-delete-row {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-delete-row:hover {
+            background-color: #d32f2f;
+        }
+
+        .total-section {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        .button-group {
+            position: fixed;
+            top: 0;
+            inset-inline-start: 0;
+            width: 100%;
+            z-index: 1000;
             display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 9px 16px;
+            background: rgba(250, 250, 251, 0.96);
+            backdrop-filter: saturate(180%) blur(8px);
+            border-bottom: 1px solid #e3e5e8;
+            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+        }
+
+        /* The fixed bar is out of the flow, so nothing reserves space
+           for it — without this the page's first heading starts
+           underneath it. Buttons wrap on narrow screens, hence the
+           generous reserve rather than a value matched to one row. */
+        body {
+            padding-top: 70px;
+        }
+
+        @media (max-width: 700px) {
+            body { padding-top: 108px; }
+            .button-group { gap: 6px; padding: 8px 10px; }
+            .btn { padding: 8px 13px; font-size: 13px; gap: 6px; }
+            .btn-addrow { font-size: 14px; }
+        }
+
+        /* ── Toolbar buttons ─────────────────────────────────────
+           Neutral greys, not one colour per action. Five saturated
+           buttons side by side each shout equally loudly, which tells
+           the eye nothing about which one matters; a quiet toolbar lets
+           the SHEET be the coloured thing on the page. The one action
+           that is genuinely primary — Add Row — keeps its colour, and
+           now stands alone where it is used.
+
+           `border-radius: 999px` is a capsule at any height: it clamps
+           to half the box, so the pill survives a font-size change or a
+           wrapped label without turning into a lozenge. */
+        .btn {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-            transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease;
+            padding: 9px 18px;
+            border: 1px solid #d8dade;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #fdfdfe 0%, #f1f2f4 100%);
+            color: #3c4043;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+            transition: background 0.15s ease, border-color 0.15s ease,
+                        box-shadow 0.15s ease, transform 0.05s ease;
         }
 
-        .lang-switch:hover {
-            opacity: 1;
-            transform: translateY(-2px);
+        .btn:hover {
+            background: linear-gradient(180deg, #ffffff 0%, #e8eaed 100%);
+            border-color: #c3c6cb;
+            box-shadow: 0 2px 5px rgba(16, 24, 40, 0.09);
         }
 
-        .lang-switch:focus-visible {
-            outline: 3px solid #ffd166;
+        /* Pressed state moves the button 1px instead of only changing
+           colour, so a tap on a touch screen — where there is no hover —
+           still confirms it registered. */
+        .btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.12);
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid #6f42c1;
             outline-offset: 2px;
         }
 
-        .lang-switch.dimmed {
-            opacity: 0.28;
+        /* Icons inherit the label colour through currentColor, so they
+           never need a second rule when the button state changes.
+           `.cut` punches the folded-corner and label shapes back out of
+           the filled body; `.stroke` is for lines that must stay lines. */
+        .btn-ico {
+            width: 17px;
+            height: 17px;
+            flex-shrink: 0;
+            fill: currentColor;
         }
 
-        .lang-switch.collapsed {
-            opacity: 0;
-            transform: translateY(-80px);
-            pointer-events: none;
+        .btn-ico .cut {
+            fill: #f1f2f4;
+            stroke: currentColor;
+            stroke-width: 1.1;
         }
 
-        @media (max-width: 768px) {
-            .lang-switch {
-                height: 44px;
-                padding: 0 14px;
-                font-size: 0.85rem;
-                top: 8px;
-                inset-inline-end: 8px;
-            }
+        /* Lines drawn OVER the page, not punched out of a filled shape. */
+        .btn-ico .stroke2 {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.4;
+            stroke-linecap: round;
         }
+
+        .btn-ico .stroke {
+            fill: none;
+            stroke: #f1f2f4;
+            stroke-width: 1.3;
+            stroke-linecap: round;
+        }
+
+        .btn:hover .btn-ico .cut { fill: #e8eaed; }
+        .btn:hover .btn-ico .stroke { stroke: #e8eaed; }
+
+        /* ── Add Row ─────────────────────────────────────────────
+           Full width under the table: it is the only action taken
+           repeatedly, and a wide target is a cheap way to make a
+           repeated action fast. */
+        .add-row-bar {
+            margin: 14px 0 6px;
+        }
+
+        .btn-addrow {
+            width: 100%;
+            justify-content: center;
+            padding: 12px 18px;
+            border: 1px dashed #b9c6bb;
+            border-radius: 10px;
+            background: #f4f9f5;
+            color: #2f6b3f;
+            font-size: 15px;
+        }
+
+        .btn-addrow:hover {
+            background: #e9f4ec;
+            border-color: #8fb59a;
+            border-style: solid;
+        }
+
+        .btn-addrow .btn-ico {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1;
+            width: auto;
+            height: auto;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #0b7dda;
+        }
+
+        .btn-warning {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #e68900;
+        }
+
+        .hidden {
+            display: none;
+        }
+.btn-success {
+  background-color: #4CAF50;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #43a047;
+}
+/* ===== Footer ===== */
+.app-footer {
+  /* Was 40px top / 14px vertical padding. The disclaimer now collapses,
+     so the footer's resting height is a single line and the old spacing
+     left the page ending in dead white. */
+  margin-top: 20px;
+  padding: 8px 18px 6px;
+  background: #f5f5f5;
+  border-top: 1px solid #ddd;
+  font-size: 13px;
+  color: #444;
+  text-align: center;
+}
+
+/* <details>/<summary> rather than a button and a class toggle: the
+   open/closed state, keyboard access and the disclosure arrow are all
+   native, and the text stays in the DOM for search and printing even
+   while collapsed. */
+.app-footer details.disclaimer-box {
+  margin-top: 4px;
+}
+
+.app-footer details.disclaimer-box > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #555;
+  user-select: none;
+}
+
+.app-footer details.disclaimer-box > summary::-webkit-details-marker { display: none; }
+
+.app-footer details.disclaimer-box > summary::after {
+  content: '\25B8';                     /* small right-pointing triangle */
+  font-size: 11px;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+/* The arrow points along the reading direction, so under RTL it has to
+   start mirrored or it points away from the text it belongs to. */
+html[dir="rtl"] .app-footer details.disclaimer-box > summary::after {
+  transform: rotate(180deg);
+}
+
+.app-footer details.disclaimer-box[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+html[dir="rtl"] .app-footer details.disclaimer-box[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.footer-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.app-footer .copyright {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.app-footer .disclaimer {
+  font-weight: 400;
+  color: #555;
+}
+.btn-add {
+  background-color: #6f42c1;   
+  color: #fff;
+  border: none;
+}
+
+.btn-add:hover {
+  background-color: #5a32a3;  
+}
+
     </style>
 </head>
 <body>
-    <!-- Main Landing Page -->
-    <div class="main-container" id="mainPage">
+    <div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
+
+    <!-- position:fixed, not sticky. Sticky would still scroll away
+         inside a taller ancestor and only pin at the viewport edge;
+         a costing sheet grows to dozens of rows and the export
+         buttons have to stay reachable from any scroll position. The
+         cost is that the bar leaves the flow, so body carries a
+         matching padding-top below. -->
+    <div class="button-group" id="topBar">
+        <button class="btn" onclick="saveToJSON()"><svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h9l3 3v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M7 3v4h6V3" class="cut"/><rect x="6" y="11" width="8" height="6" rx="1" class="cut"/></svg><span data-i18n="btnSave">Save Work</span></button>
+        <button class="btn" onclick="document.getElementById('loadJSON').click()"><svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h4l1.5 2h7.5A1.5 1.5 0 0 1 18 7.5v7A1.5 1.5 0 0 1 16.5 16h-13A1.5 1.5 0 0 1 2 14.5z"/></svg><span data-i18n="btnLoad">Open File</span></button>
+        <button class="btn" onclick="exportToDOCX()"><svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4" class="cut"/><path d="M7 11h6M7 14h4" class="stroke"/></svg><span data-i18n="btnDocx">Export DOCX</span></button>
+        <button class="btn" onclick="exportToExcelXLSX()"><svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M3 8h14M8 8v8M13 8v8" class="stroke"/></svg><span data-i18n="btnExcel">Export Excel</span></button>
+
+        <!-- The switch used to be absolutely positioned inside .container,
+             which put it on top of the <h1> as soon as the heading wrapped
+             to two lines — which it always does on a phone. In the toolbar
+             it is in the flow, so it wraps with everything else instead of
+             overlapping anything. -->
+        <div class="lang-switch">
+            <button type="button" id="btnLangEn" onclick="setLang('en')">EN</button>
+            <button type="button" id="btnLangAr" onclick="setLang('ar')">ع</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 data-i18n="appTitle">Training Resources Management Tool</h1>
+        
         <div class="header-section">
-            <h1 id="pageTitle">TVET Engineering Tools</h1>
-            <p class="subtitle" id="pageSubtitle">🎯 Master Interface - Professional Tools for Training &amp; Education Management</p>
-        </div>
-
-        <div class="tools-grid">
-            <!-- Workshop Agenda Manager Card -->
-            <div class="tool-card" onclick="openTool('workshop')">
-                <div class="tool-icon">📋</div>
-                <h2 class="tool-title">Workshop Agenda Manager</h2>
-                <p class="tool-description">Create, organize, and export professional workshop agendas with detailed schedules, activities, and participant notes.</p>
-                <button class="tool-button">Open Tool →</button>
+            <div>
+                <div class="form-group">
+                    <label data-i18n="lblOrg">Organization Name:</label>
+                    <input type="text" id="orgName" placeholder="Enter organization name" data-i18n-ph="phOrg">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="lblTitle">Workshop / Specialization:</label>
+                    <input type="text" id="trainingTitle" placeholder="Enter workshop or specialization" data-i18n-ph="phTitle">
+                </div>
+                <!-- Placed directly under the workshop field, not next to
+                     the cost column: the currency applies to the whole
+                     sheet, so it belongs with the document's identity
+                     rather than with any one row. -->
+                <div class="form-group">
+                    <label data-i18n="lblCurrency">Currency:</label>
+                    <select id="currency" onchange="onCurrencyChange()"></select>
+                </div>
             </div>
-
-            <!-- Training Cost Calculator Card -->
-            <div class="tool-card" onclick="openTool('calculator')">
-                <div class="tool-icon">💰</div>
-                <h2 class="tool-title">Training Cost Calculator</h2>
-                <p class="tool-description">Calculate comprehensive training costs including venue, materials, trainer fees, and participant allowances with multi-currency support.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- National Qualification Framework Card -->
-            <div class="tool-card" onclick="openTool('nqf')">
-                <div class="tool-icon">🌍</div>
-                <h2 class="tool-title">National Qualification Framework</h2>
-                <p class="tool-description">Interactive world map to explore and search National Qualification Frameworks and equivalent sources across countries.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- LinkedIn Post Editor Card -->
-            <div class="tool-card" onclick="openTool('linkedin')">
-                <div class="tool-icon">💼</div>
-                <h2 class="tool-title">LinkedIn Post Editor</h2>
-                <p class="tool-description">Create and format engaging LinkedIn posts with Unicode text styles, emojis, and professional formatting tools.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- DACUM Lite Card -->
-            <div class="tool-card" onclick="openTool('dacum')">
-                <div class="tool-icon">📊</div>
-                <h2 class="tool-title">DACUM Lite</h2>
-                <p class="tool-description">Build, edit and export occupational analysis charts — duties, tasks and supporting information — in Arabic, English or French, with Word and PDF output.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- Link to QR Converter Card -->
-            <div class="tool-card" onclick="openTool('qrconverter')">
-                <div class="tool-icon">🔗</div>
-                <h2 class="tool-title">Link to QR Converter</h2>
-                <p class="tool-description">Convert any URL or text into a QR code instantly. Download high-quality QR codes for printing and sharing.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- Result Based Project Proposal Card -->
-            <div class="tool-card" onclick="openTool('rbmproposal')">
-                <div class="tool-icon">📝</div>
-                <h2 class="tool-title">RBM Project Proposal Tool</h2>
-                <p class="tool-description">Create results-based management project proposals with logical frameworks, indicators, and monitoring plans.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- Training Resources Management Card -->
-            <div class="tool-card" onclick="openTool('trainingresources')">
-                <div class="tool-icon">📚</div>
-                <h2 class="tool-title">Training Resources Management</h2>
-                <p class="tool-description">Organize and manage training materials, resources, and documentation efficiently in one central location.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- Screen Recorder Card -->
-            <div class="tool-card" onclick="openTool('screenrecorder')">
-                <div class="tool-icon">🎥</div>
-                <h2 class="tool-title">Screen Recorder</h2>
-                <p class="tool-description">Record your screen, webcam, or both for creating training videos, demonstrations, and tutorials.</p>
-                <button class="tool-button">Open Tool →</button>
-            </div>
-
-            <!-- Ice Breaker Games Card -->
-            <div class="tool-card" onclick="openTool('icebreaker')">
-                <div class="tool-icon">🧊</div>
-                <h2 class="tool-title">Ice Breaker Games</h2>
-                <p class="tool-description">A bilingual facilitator toolkit of ice breaker games to energize workshops and training sessions from the very first minute.</p>
-                <button class="tool-button">Open Tool →</button>
+            <div>
+                <div class="form-group">
+                    <label data-i18n="lblBy">Prepared By:</label>
+                    <input type="text" id="preparedBy" placeholder="Enter your name" data-i18n-ph="phBy">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="lblDate">Date:</label>
+                    <input type="date" id="prepDate">
+                </div>
             </div>
         </div>
 
-        <div class="footer">
-            <p class="copyright" id="copyrightText">&copy; 2026 Husham Jawad. All rights reserved.</p>
-            <p class="version" id="versionText">TVET Engineering Tools - Master Interface v4.1</p>
+        <div class="table-toolbar">
+            <button class="btn btn-danger" onclick="clearAllRows()">
+                <svg class="btn-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 7h8l-.8 9.1a1 1 0 0 1-1 .9H7.8a1 1 0 0 1-1-.9z"/><path d="M4.5 5h11M8 5V3.6a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 1 .6.6V5" class="stroke2"/></svg>
+                <span data-i18n="btnClearAll">Clear All</span>
+            </button>
         </div>
-    </div>
 
-    <!-- Language switch (always visible, both on the landing page and inside a tool) -->
-    <button class="lang-switch" id="langSwitch" onclick="toggleLanguage()" title="Switch language (L)">
-        <span aria-hidden="true">🌐</span>
-        <span id="langSwitchLabel">العربية</span>
-    </button>
-
-    <!-- Persistent Top Navigation Bar -->
-    <div class="nav-bar" id="navBar">
-        <button class="nav-btn" id="backBtn" onclick="goBack()" title="Back">
-            <span class="nav-arrow">←</span>
-            <span class="label" id="backLabel">Back</span>
-        </button>
-        <button class="nav-btn" id="forwardBtn" onclick="goForward()" title="Forward">
-            <span class="label" id="forwardLabel">Forward</span>
-            <span class="nav-arrow">→</span>
-        </button>
-        <button class="nav-btn icon-only" id="homeBtn" onclick="backToMain()" title="All tools">🏠</button>
-        <span class="nav-divider"></span>
-        <button class="nav-btn icon-only" id="fullscreenBtn" onclick="toggleFullscreen()" title="Full screen (F)">⛶</button>
-        <button class="nav-btn icon-only" id="newTabBtn" onclick="openCurrentInNewTab()" title="Open this tool in a new tab">↗</button>
-        <button class="nav-btn icon-only" id="hideBarBtn" onclick="setBarHidden(true)" title="Hide this bar">✕</button>
-        <span class="nav-title" id="navTitle"></span>
-    </div>
-
-    <!-- Handle + top-edge strip that bring the hidden bar back -->
-    <button class="nav-handle" id="navHandle" onclick="setBarHidden(false)" title="Show navigation bar">☰</button>
-    <div class="nav-hotspot" id="navHotspot"></div>
-
-    <!-- Workshop Agenda Manager View -->
-    <div class="tool-view" id="workshopView">
-        <div class="loading" id="workshopLoading">
-            <div class="spinner"></div>
-            <p id="workshopLoadingText"></p>
+        <div class="table-container">
+            <table id="resourcesTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="colItem">Item / Line Name</th>
+                        <th data-i18n="colQty">Quantity</th>
+                        <th data-i18n="colUnit">Unit</th>
+                        <th data-i18n="colSpec">Specification</th>
+                        <th data-i18n="colUnitCost">Unit Cost</th>
+                        <th data-i18n="colTotal">Total Cost</th>
+                        <th data-i18n="colImage">Image</th>
+                        <th data-i18n="colDelete">Delete</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
         </div>
-        <iframe id="workshopFrame" class="iframe-container"></iframe>
-    </div>
 
-    <!-- Training Cost Calculator View -->
-    <div class="tool-view" id="calculatorView">
-        <div class="loading" id="calculatorLoading">
-            <div class="spinner"></div>
-            <p id="calculatorLoadingText"></p>
+        <!-- Add Row sits BELOW the table, not in the toolbar. Entering a
+             long list means the cursor is already at the bottom of the
+             sheet; a button at the top of the viewport costs a scroll up
+             and a scroll back for every single line. -->
+        <div class="add-row-bar">
+            <button class="btn btn-addrow" onclick="addRow()">
+                <span class="btn-ico" aria-hidden="true">＋</span>
+                <span data-i18n="btnAddRow">Add Row</span>
+            </button>
         </div>
-        <iframe id="calculatorFrame" class="iframe-container"></iframe>
-    </div>
 
-    <!-- National Qualification Framework View -->
-    <div class="tool-view" id="nqfView">
-        <div class="loading" id="nqfLoading">
-            <div class="spinner"></div>
-            <p id="nqfLoadingText"></p>
+        <div class="total-section">
+            <span data-i18n="grandTotal">Grand Total:</span> <span id="grandTotal">0.00</span>
         </div>
-        <iframe id="nqfFrame" class="iframe-container"></iframe>
-    </div>
 
-    <!-- LinkedIn Post Editor View -->
-    <div class="tool-view" id="linkedinView">
-        <div class="loading" id="linkedinLoading">
-            <div class="spinner"></div>
-            <p id="linkedinLoadingText"></p>
-        </div>
-        <iframe id="linkedinFrame" class="iframe-container"></iframe>
-    </div>
-
-    <!-- DACUM Lite View -->
-    <div class="tool-view" id="dacumView">
-        <div class="loading" id="dacumLoading">
-            <div class="spinner"></div>
-            <p id="dacumLoadingText"></p>
-        </div>
-        <iframe id="dacumFrame" class="iframe-container"></iframe>
-    </div>
-
-    <!-- Link to QR Converter View -->
-    <div class="tool-view" id="qrconverterView">
-        <div class="loading" id="qrconverterLoading">
-            <div class="spinner"></div>
-            <p id="qrconverterLoadingText"></p>
-        </div>
-        <iframe id="qrconverterFrame" class="iframe-container"></iframe>
-    </div>
-
-    <!-- RBM Project Proposal View -->
-    <div class="tool-view" id="rbmproposalView">
-        <div class="loading" id="rbmproposalLoading">
-            <div class="spinner"></div>
-            <p id="rbmproposalLoadingText"></p>
-        </div>
-        <iframe id="rbmproposalFrame" class="iframe-container"></iframe>
-    </div>
-
-    <!-- Training Resources Management View -->
-    <div class="tool-view" id="trainingresourcesView">
-        <div class="loading" id="trainingresourcesLoading">
-            <div class="spinner"></div>
-            <p id="trainingresourcesLoadingText"></p>
-        </div>
-        <iframe id="trainingresourcesFrame" class="iframe-container"></iframe>
-    </div>
-
-    <!-- Screen Recorder View -->
-    <div class="tool-view" id="screenrecorderView">
-        <div class="loading" id="screenrecorderLoading">
-            <div class="spinner"></div>
-            <p id="screenrecorderLoadingText"></p>
-        </div>
-        <iframe id="screenrecorderFrame" class="iframe-container"></iframe>
-    </div>
-
-    <!-- Ice Breaker Games View -->
-    <div class="tool-view" id="icebreakerView">
-        <div class="loading" id="icebreakerLoading">
-            <div class="spinner"></div>
-            <p id="icebreakerLoadingText"></p>
-        </div>
-        <iframe id="icebreakerFrame" class="iframe-container"></iframe>
+        <input type="file" id="loadJSON" class="hidden" accept=".json" onchange="loadFromJSON(event)">
     </div>
 
     <script>
-        // Store the file paths
-        const tools = {
-            workshop: 'Workshop_Agenda_Manager_English_FINAL__2_.html',
-            calculator: 'Training_Cost_Calculator_Final.html',
-            nqf: 'NQF_world_map_V3.html',
-            linkedin: 'linkedin-editor_V_0_2.html',
-            // DACUM Lite now lives in its own repository. The old
-            // DACUM_Chart_Generator_V_2_0.html file has been deleted, so this
-            // must stay an absolute URL — a relative path would 404.
-            dacum: 'https://hshamjawad.github.io/DACUM-Lite/app/index.html',
-            qrconverter: 'https://hshamjawad.github.io/Link-to-QR-Converter-Tool/',
-            rbmproposal: 'https://hshamjawad.github.io/rbm-project-proposal-tool/',
-            trainingresources: 'https://hshamjawad.github.io/Training-Resources-Management-Tool/',
-            screenrecorder: 'https://hshamjawad.github.io/Screen-Recorder/',
-            icebreaker: 'Ice_breaker_games.html'
-        };
+        /* ── Language ────────────────────────────────────────────────
+           A dictionary and a DOM sweep, not a framework: this tool is a
+           single file with roughly thirty strings, and a build step would
+           cost more than it saves.
 
-        /* =====================================================================
-           BILINGUAL DICTIONARY (EN / AR)
-           To add or edit wording, change the strings below only — no other part
-           of the file needs to be touched.
-           ===================================================================== */
+           Keys are marked in the markup three ways:
+             data-i18n      → textContent
+             data-i18n-ph   → placeholder attribute
+           and rows built in JS call _t() directly at construction time.
+
+           Rows already on screen keep the placeholders they were built
+           with, so setLang() re-runs the sweep over them too. */
         const I18N = {
             en: {
-                dir: 'ltr',
-                docTitle: 'TVET Engineering Tools - Master Interface',
-                pageTitle: 'TVET Engineering Tools',
-                pageSubtitle: '\uD83C\uDFAF Master Interface - Professional Tools for Training & Education Management',
-                openTool: 'Open Tool \u2192',
-                loading: 'Loading {tool}...',
-                copyright: '\u00A9 2026 Husham Jawad. All rights reserved.',
-                version: 'TVET Engineering Tools - Master Interface v4.1',
-                back: 'Back',
-                forward: 'Forward',
-                homeTitle: 'All tools',
-                fullscreenTitle: 'Full screen (F)',
-                newTabTitle: 'Open this tool in a new tab',
-                hideBarTitle: 'Hide this bar (H)',
-                showBarTitle: 'Show navigation bar',
-                cardNewTab: 'Open in a new tab',
-                cardNewTabAria: 'Open {tool} in a new tab',
-                langSwitchLabel: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629',
-                langSwitchTitle: 'Switch to Arabic (L)',
-                tools: {
-                    workshop: {
-                        title: 'Workshop Agenda Manager',
-                        desc: 'Create, organize, and export professional workshop agendas with detailed schedules, activities, and participant notes.'
-                    },
-                    calculator: {
-                        title: 'Training Cost Calculator',
-                        desc: 'Calculate comprehensive training costs including venue, materials, trainer fees, and participant allowances with multi-currency support.'
-                    },
-                    nqf: {
-                        title: 'National Qualification Framework',
-                        desc: 'Interactive world map to explore and search National Qualification Frameworks and equivalent sources across countries.'
-                    },
-                    linkedin: {
-                        title: 'LinkedIn Post Editor',
-                        desc: 'Create and format engaging LinkedIn posts with Unicode text styles, emojis, and professional formatting tools.'
-                    },
-                    dacum: {
-                        title: 'DACUM Lite',
-                        desc: 'Build, edit and export occupational analysis charts \u2014 duties, tasks and supporting information \u2014 in Arabic, English or French, with Word and PDF output.'
-                    },
-                    qrconverter: {
-                        title: 'Link to QR Converter',
-                        desc: 'Convert any URL or text into a QR code instantly. Download high-quality QR codes for printing and sharing.'
-                    },
-                    rbmproposal: {
-                        title: 'RBM Project Proposal Tool',
-                        desc: 'Create results-based management project proposals with logical frameworks, indicators, and monitoring plans.'
-                    },
-                    trainingresources: {
-                        title: 'Training Resources Management',
-                        desc: 'Organize and manage training materials, resources, and documentation efficiently in one central location.'
-                    },
-                    screenrecorder: {
-                        title: 'Screen Recorder',
-                        desc: 'Record your screen, webcam, or both for creating training videos, demonstrations, and tutorials.'
-                    },
-                    icebreaker: {
-                        title: 'Ice Breaker Games',
-                        desc: 'A bilingual facilitator toolkit of ice breaker games to energize workshops and training sessions from the very first minute.'
-                    }
-                }
+                appTitle:    'Training Resources Management Tool',
+                lblOrg:      'Organization Name:',
+                phOrg:       'Enter organization name',
+                lblTitle:    'Workshop / Specialization:',
+                phTitle:     'Enter workshop or specialization',
+                lblCurrency: 'Currency:',
+                lblBy:       'Prepared By:',
+                phBy:        'Enter your name',
+                lblDate:     'Date:',
+                colItem:     'Item / Line Name',
+                colQty:      'Quantity',
+                colUnit:     'Unit',
+                colSpec:     'Specification',
+                colUnitCost: 'Unit Cost',
+                colTotal:    'Total Cost',
+                colImage:    'Image',
+                colDelete:   'Delete',
+                phItem:      'Item or line name',
+                phUnit:      'e.g., pcs, kg',
+                phSpec:      'Enter specifications',
+                noImage:     'No image',
+                btnAddImage: 'Add Image',
+                grandTotal:  'Grand Total:',
+                btnAddRow:   'Add Row',
+                btnSave:     'Save Work',
+                btnLoad:     'Open File',
+                btnDocx:     'Export DOCX',
+                btnExcel:    'Export Excel',
+                xlSheet:     'Training Resources',
+                xlHeading:   'Training Resource Management Tool',
+                xlOrg:       'Organization Name',
+                xlTitle:     'Workshop / Specialization',
+                xlBy:        'Prepared By',
+                xlDate:      'Date',
+                xlFallbackName: 'training_resources',
+                btnClearAll: 'Clear All',
+                dlgConfirm:  'Confirm',
+                dlgCancel:   'Cancel',
+                dlgClearTitle: 'Clear all rows?',
+                dlgClearBody:  'Filled rows ({n}) will be emptied and this cannot be undone. The organization, workshop and currency fields are kept.',
+                dlgClearConfirm: 'Clear all',
+                dlgDeleteRowTitle: 'Delete this row?',
+                dlgDeleteRowBody:  'The row and any image attached to it will be removed. This cannot be undone.',
+                dlgDeleteConfirm: 'Delete',
+                msgCleared:  'All rows cleared.',
+                msgNothingToClear: 'There is nothing to clear \u2014 the table is already empty.',
+                msgRowDeleted: 'Row deleted.',
+                msgLoadOk:   'File loaded successfully.',
+                msgLoadError: 'Could not read the file: ',
+                msgExcelOk:  'Excel file exported successfully.',
+                msgExcelError: 'Could not export the Excel file: ',
+                msgExcelLoading: 'Spreadsheet library is still loading. Please wait and try again.',
+                ftDisclaimerLabel: 'Disclaimer',
+                ftCopyright: '\u00A9 2026 Training Resource Management Tool | by Husham Jawad Kadhim | Version 2026 | All Rights Reserved',
+                ftDisclaimerBody: 'Training Resource Management Tool is provided "as is" without warranty of any kind. The developer assumes no responsibility for any inaccuracies, errors, omissions, or inconsistencies in the generated documents. Users and facilitating institutions are solely responsible for verifying, validating, and making final decisions on all content before use.',
+                docPreparedBy: 'Prepared By',
+                docDate: 'Date',
+                docNoImage: 'No image',
+                docGrandTotal: 'Grand Total',
+                msgDocxOk: 'DOCX exported successfully.',
+                msgDocxLoading: 'Document library is still loading. Please wait and try again.',
+                msgDocxError: 'Error exporting DOCX: ',
+                docFallbackName: 'training_resources',
             },
             ar: {
-                dir: 'rtl',
-                docTitle: 'أدوات هندسة التعليم والتدريب التقني والمهني - الواجهة الرئيسية',
-                pageTitle: 'أدوات هندسة التعليم والتدريب التقني والمهني',
-                pageSubtitle: '🎯 الواجهة الرئيسية - أدوات احترافية لإدارة التدريب والتعليم',
-                openTool: 'افتح الأداة \u2192',
-                loading: 'جارٍ تحميل {tool} ...',
-                copyright: '\u00A9 2026 هشام جواد. جميع الحقوق محفوظة.',
-                version: 'أدوات هندسة التعليم والتدريب التقني والمهني - الواجهة الرئيسية، الإصدار 4.1',
-                back: 'رجوع',
-                forward: 'تقدّم',
-                homeTitle: 'جميع الأدوات',
-                fullscreenTitle: 'ملء الشاشة (F)',
-                newTabTitle: 'فتح هذه الأداة في تبويب جديد',
-                hideBarTitle: 'إخفاء الشريط (H)',
-                showBarTitle: 'إظهار شريط التنقل',
-                cardNewTab: 'فتح في تبويب جديد',
-                cardNewTabAria: 'فتح {tool} في تبويب جديد',
-                langSwitchLabel: 'English',
-                langSwitchTitle: 'التبديل إلى الإنكليزية (L)',
-                tools: {
-                    workshop: {
-                        title: 'مدير أجندة ورش العمل',
-                        desc: 'إنشاء وتنظيم وتصدير أجندات احترافية لورش العمل، مع جداول زمنية تفصيلية والأنشطة وملاحظات المشاركين.'
-                    },
-                    calculator: {
-                        title: 'حاسبة كلفة التدريب',
-                        desc: 'احتساب كلفة التدريب الشاملة: القاعة والمواد وأتعاب المدربين وبدلات المشاركين، مع دعم عملات متعددة.'
-                    },
-                    nqf: {
-                        title: 'إطار المؤهلات الوطني',
-                        desc: 'خريطة عالم تفاعلية لاستكشاف أطر المؤهلات الوطنية والمصادر المكافئة في مختلف الدول والبحث فيها.'
-                    },
-                    linkedin: {
-                        title: 'محرر منشورات لينكد إن',
-                        desc: 'إنشاء وتنسيق منشورات جذّابة على لينكد إن بأنماط نصوص يونيكود ورموز تعبيرية وأدوات تنسيق احترافية.'
-                    },
-                    dacum: {
-                        title: 'داكم لايت DACUM Lite',
-                        desc: 'إعداد وتحرير وتصدير مخططات تحليل المهنة \u2014 الواجبات والمهام والمعلومات المساندة \u2014 بالعربية أو الإنكليزية أو الفرنسية، مع إخراج بصيغتي Word و PDF.'
-                    },
-                    qrconverter: {
-                        title: 'محوّل الروابط إلى رمز QR',
-                        desc: 'حوّل أي رابط أو نص إلى رمز QR فوراً، مع إمكانية تنزيل رموز عالية الجودة للطباعة والمشاركة.'
-                    },
-                    rbmproposal: {
-                        title: 'أداة إعداد مقترحات المشاريع (RBM)',
-                        desc: 'إعداد مقترحات المشاريع وفق الإدارة المبنية على النتائج، مع الأطر المنطقية والمؤشرات وخطط الرصد والمتابعة.'
-                    },
-                    trainingresources: {
-                        title: 'إدارة الموارد التدريبية',
-                        desc: 'تنظيم وإدارة المواد والموارد التدريبية والوثائق بكفاءة في مكان مركزي واحد.'
-                    },
-                    screenrecorder: {
-                        title: 'مسجّل الشاشة',
-                        desc: 'سجّل شاشتك أو كاميرا الويب أو كليهما لإنتاج فيديوهات تدريبية وعروض توضيحية ودروس تعليمية.'
-                    },
-                    icebreaker: {
-                        title: 'ألعاب كسر الجليد',
-                        desc: 'حقيبة ثنائية اللغة للميسّرين تضم ألعاب كسر الجليد لتنشيط ورش العمل والجلسات التدريبية منذ الدقيقة الأولى.'
-                    }
-                }
-            }
+                appTitle:    'أداة إدارة الموارد التدريبية',
+                lblOrg:      'اسم الجهة:',
+                phOrg:       'أدخل اسم الجهة',
+                lblTitle:    'الورشة التدريبية / الاختصاص:',
+                phTitle:     'أدخل الورشة التدريبية أو الاختصاص',
+                lblCurrency: 'العملة:',
+                lblBy:       'إعداد:',
+                phBy:        'أدخل اسمك',
+                lblDate:     'التاريخ:',
+                colItem:     'اسم المادة / الفقرة',
+                colQty:      'الكمية',
+                colUnit:     'الوحدة',
+                colSpec:     'المواصفات',
+                colUnitCost: 'سعر الوحدة',
+                colTotal:    'التكلفة الإجمالية',
+                colImage:    'الصورة',
+                colDelete:   'حذف',
+                phItem:      'اسم المادة أو الفقرة',
+                phUnit:      'مثال: قطعة، كغم',
+                phSpec:      'أدخل المواصفات',
+                noImage:     'لا توجد صورة',
+                btnAddImage: 'إضافة صورة',
+                grandTotal:  'المجموع الكلي:',
+                btnAddRow:   'إضافة صف',
+                btnSave:     'حفظ العمل',
+                btnLoad:     'فتح ملف',
+                btnDocx:     'تصدير DOCX',
+                btnExcel:    'تصدير Excel',
+                xlSheet:     'الموارد التدريبية',
+                xlHeading:   'أداة إدارة الموارد التدريبية',
+                xlOrg:       'اسم الجهة',
+                xlTitle:     'الورشة التدريبية / الاختصاص',
+                xlBy:        'إعداد',
+                xlDate:      'التاريخ',
+                xlFallbackName: 'الموارد_التدريبية',
+                btnClearAll: 'تفريغ الكل',
+                dlgConfirm:  'تأكيد',
+                dlgCancel:   'إلغاء',
+                dlgClearTitle: 'تفريغ جميع الصفوف؟',
+                dlgClearBody:  'سيتم تفريغ الصفوف المعبّأة ({n})، ولا يمكن التراجع عن ذلك. أما حقول الجهة والورشة والعملة فتبقى كما هي.',
+                dlgClearConfirm: 'تفريغ الكل',
+                dlgDeleteRowTitle: 'حذف هذا الصف؟',
+                dlgDeleteRowBody:  'سيُحذف الصف وأي صورة مرفقة به، ولا يمكن التراجع عن ذلك.',
+                dlgDeleteConfirm: 'حذف',
+                msgCleared:  'تم تفريغ جميع الصفوف.',
+                msgNothingToClear: 'لا يوجد ما يُفرَّغ \u2014 الجدول فارغ أصلاً.',
+                msgRowDeleted: 'تم حذف الصف.',
+                msgLoadOk:   'تم فتح الملف بنجاح.',
+                msgLoadError: 'تعذّرت قراءة الملف: ',
+                msgExcelOk:  'تم تصدير ملف Excel بنجاح.',
+                msgExcelError: 'تعذّر تصدير ملف Excel: ',
+                msgExcelLoading: 'مكتبة الجداول قيد التحميل. يرجى الانتظار والمحاولة مجدداً.',
+                ftDisclaimerLabel: 'إخلاء المسؤولية',
+                ftCopyright: '\u00A9 2026 أداة إدارة الموارد التدريبية | إعداد هشام جواد كاظم | إصدار 2026 | جميع الحقوق محفوظة',
+                ftDisclaimerBody: 'تُقدَّم أداة إدارة الموارد التدريبية كما هي دون أي ضمان من أي نوع. ولا يتحمّل المطوّر أي مسؤولية عن أي عدم دقة أو أخطاء أو إغفال أو تعارض في المستندات المُولَّدة. ويتحمّل المستخدمون والجهات المنفّذة وحدهم مسؤولية التحقق من كل المحتوى واعتماده واتخاذ القرار النهائي بشأنه قبل الاستخدام.',
+                docPreparedBy: 'إعداد',
+                docDate: 'التاريخ',
+                docNoImage: 'لا توجد صورة',
+                docGrandTotal: 'المجموع الكلي',
+                msgDocxOk: 'تم تصدير ملف DOCX بنجاح.',
+                msgDocxLoading: 'مكتبة المستندات قيد التحميل. يرجى الانتظار والمحاولة مجدداً.',
+                msgDocxError: 'تعذّر تصدير DOCX: ',
+                docFallbackName: 'الموارد_التدريبية',
+            },
         };
 
-        // Current language. English stays the default on first visit.
-        let currentLang = 'en';
-        try {
-            const savedLang = localStorage.getItem('tvet_lang');
-            if (savedLang === 'ar' || savedLang === 'en') { currentLang = savedLang; }
-        } catch (e) {}
+        let LANG = 'en';
+        const _t = (k) => (I18N[LANG] && I18N[LANG][k] !== undefined) ? I18N[LANG][k] : k;
+        /* {n} is the only placeholder any string here needs. */
+        const _tf = (k, n) => String(_t(k)).replace('{n}', n);
+        const _isRTL = () => LANG === 'ar';
 
-        function t(key) {
-            return I18N[currentLang][key];
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = _t(el.getAttribute('data-i18n'));
+            });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+                el.placeholder = _t(el.getAttribute('data-i18n-ph'));
+            });
+            /* Rows are built from a template string, so their placeholders
+               carry no data-i18n attribute to sweep. Re-set them by class. */
+            const byClass = [
+                ['.item-name', 'phItem'],
+                ['.unit', 'phUnit'],
+                ['.specification', 'phSpec'],
+            ];
+            byClass.forEach(([sel, key]) => {
+                document.querySelectorAll(sel).forEach(el => { el.placeholder = _t(key); });
+            });
+            document.querySelectorAll('.image-placeholder').forEach(el => {
+                el.textContent = _t('noImage');
+            });
+            document.querySelectorAll('.btn-add-image').forEach(el => {
+                el.textContent = '📷 ' + _t('btnAddImage');
+            });
+            /* Rebuilt rather than relabelled: the option text is composed
+               from the localised currency name, so it changes with the
+               language while the selected code stays put. */
+            if (typeof buildCurrencyOptions === 'function') buildCurrencyOptions();
+            if (typeof updateCostHeaders === 'function') updateCostHeaders();
         }
 
-        // Display titles shown in the top navigation bar (localised)
-        function toolTitle(name) {
-            const entry = I18N[currentLang].tools[name];
-            return entry ? entry.title : '';
+        function setLang(lang) {
+            LANG = (lang === 'ar') ? 'ar' : 'en';
+            const html = document.documentElement;
+            html.setAttribute('lang', LANG);
+            html.setAttribute('dir', _isRTL() ? 'rtl' : 'ltr');
+            document.getElementById('btnLangEn').classList.toggle('active', LANG === 'en');
+            document.getElementById('btnLangAr').classList.toggle('active', LANG === 'ar');
+            applyTranslations();
+            try { localStorage.setItem('trm_lang', LANG); } catch (e) { /* private mode */ }
         }
 
-        const allToolNames = Object.keys(tools);
 
-        // Navigation history stack. Each entry is either 'main' or a tool name.
-        let navHistory = ['main'];
-        let navIndex = 0;
+        /* ── Currency ────────────────────────────────────────────────
+           One selection for the whole document, stored as a code plus a
+           symbol. The code is what goes into the exported files: "IQD
+           1,250.50" is unambiguous in a procurement document in a way a
+           bare symbol is not, and several of these currencies share the
+           symbol د.إ or £ with their neighbours.
 
-        function hideAllViews() {
-            document.getElementById('mainPage').style.display = 'none';
-            allToolNames.forEach(function (name) {
-                document.getElementById(name + 'View').classList.remove('active');
+           Names are localised because a facilitator reading an Arabic
+           interface should not have to recognise "Iraqi Dinar" in Latin
+           script to pick their own currency. */
+        const CURRENCIES = [
+            { code: 'IQD', symbol: '\u062f.\u0639', en: 'Iraqi Dinar',          ar: '\u062f\u064a\u0646\u0627\u0631 \u0639\u0631\u0627\u0642\u064a' },
+            { code: 'USD', symbol: '$',   en: 'US Dollar',            ar: '\u062f\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064a\u0643\u064a' },
+            { code: 'EUR', symbol: '\u20AC',   en: 'Euro',                  ar: '\u064a\u0648\u0631\u0648' },
+            { code: 'GBP', symbol: '\u00A3',   en: 'British Pound',         ar: '\u062c\u0646\u064a\u0647 \u0625\u0633\u062a\u0631\u0644\u064a\u0646\u064a' },
+            { code: 'SAR', symbol: '\u0631.\u0633', en: 'Saudi Riyal',           ar: '\u0631\u064a\u0627\u0644 \u0633\u0639\u0648\u062f\u064a' },
+            { code: 'AED', symbol: '\u062f.\u0625', en: 'UAE Dirham',            ar: '\u062f\u0631\u0647\u0645 \u0625\u0645\u0627\u0631\u0627\u062a\u064a' },
+            { code: 'KWD', symbol: '\u062f.\u0643', en: 'Kuwaiti Dinar',         ar: '\u062f\u064a\u0646\u0627\u0631 \u0643\u0648\u064a\u062a\u064a' },
+            { code: 'QAR', symbol: '\u0631.\u0642', en: 'Qatari Riyal',          ar: '\u0631\u064a\u0627\u0644 \u0642\u0637\u0631\u064a' },
+            { code: 'BHD', symbol: '.\u062f.\u0628', en: 'Bahraini Dinar',       ar: '\u062f\u064a\u0646\u0627\u0631 \u0628\u062d\u0631\u064a\u0646\u064a' },
+            { code: 'OMR', symbol: '\u0631.\u0639', en: 'Omani Rial',            ar: '\u0631\u064a\u0627\u0644 \u0639\u0645\u0627\u0646\u064a' },
+            { code: 'JOD', symbol: '\u062f.\u0627', en: 'Jordanian Dinar',       ar: '\u062f\u064a\u0646\u0627\u0631 \u0623\u0631\u062f\u0646\u064a' },
+            { code: 'EGP', symbol: '\u062c.\u0645', en: 'Egyptian Pound',        ar: '\u062c\u0646\u064a\u0647 \u0645\u0635\u0631\u064a' },
+            { code: 'LBP', symbol: '\u0644.\u0644', en: 'Lebanese Pound',        ar: '\u0644\u064a\u0631\u0629 \u0644\u0628\u0646\u0627\u0646\u064a\u0629' },
+            { code: 'SYP', symbol: '\u0644.\u0633', en: 'Syrian Pound',          ar: '\u0644\u064a\u0631\u0629 \u0633\u0648\u0631\u064a\u0629' },
+            { code: 'YER', symbol: '\u0631.\u064a', en: 'Yemeni Rial',           ar: '\u0631\u064a\u0627\u0644 \u064a\u0645\u0646\u064a' },
+            { code: 'MAD', symbol: '\u062f.\u0645', en: 'Moroccan Dirham',       ar: '\u062f\u0631\u0647\u0645 \u0645\u063a\u0631\u0628\u064a' },
+            { code: 'DZD', symbol: '\u062f.\u062c', en: 'Algerian Dinar',        ar: '\u062f\u064a\u0646\u0627\u0631 \u062c\u0632\u0627\u0626\u0631\u064a' },
+            { code: 'TND', symbol: '\u062f.\u062a', en: 'Tunisian Dinar',        ar: '\u062f\u064a\u0646\u0627\u0631 \u062a\u0648\u0646\u0633\u064a' },
+            { code: 'LYD', symbol: '\u062f.\u0644', en: 'Libyan Dinar',          ar: '\u062f\u064a\u0646\u0627\u0631 \u0644\u064a\u0628\u064a' },
+            { code: 'SDG', symbol: '\u062c.\u0633', en: 'Sudanese Pound',        ar: '\u062c\u0646\u064a\u0647 \u0633\u0648\u062f\u0627\u0646\u064a' },
+            { code: 'TRY', symbol: '\u20BA',   en: 'Turkish Lira',          ar: '\u0644\u064a\u0631\u0629 \u062a\u0631\u0643\u064a\u0629' },
+            { code: 'IRR', symbol: '\uFDFC',   en: 'Iranian Rial',          ar: '\u0631\u064a\u0627\u0644 \u0625\u064a\u0631\u0627\u0646\u064a' },
+            { code: 'JPY', symbol: '\u00A5',   en: 'Japanese Yen',          ar: '\u064a\u0646 \u064a\u0627\u0628\u0627\u0646\u064a' },
+            { code: 'CNY', symbol: '\u00A5',   en: 'Chinese Yuan',          ar: '\u064a\u0648\u0627\u0646 \u0635\u064a\u0646\u064a' },
+            { code: 'INR', symbol: '\u20B9',   en: 'Indian Rupee',          ar: '\u0631\u0648\u0628\u064a\u0629 \u0647\u0646\u062f\u064a\u0629' },
+            { code: 'CHF', symbol: 'CHF', en: 'Swiss Franc',          ar: '\u0641\u0631\u0646\u0643 \u0633\u0648\u064a\u0633\u0631\u064a' },
+            { code: 'CAD', symbol: 'C$',  en: 'Canadian Dollar',      ar: '\u062f\u0648\u0644\u0627\u0631 \u0643\u0646\u062f\u064a' },
+            { code: 'AUD', symbol: 'A$',  en: 'Australian Dollar',    ar: '\u062f\u0648\u0644\u0627\u0631 \u0623\u0633\u062a\u0631\u0627\u0644\u064a' },
+        ];
+
+        function getCurrency() {
+            const code = document.getElementById('currency')?.value || 'IQD';
+            return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
+        }
+
+        /* Exports print the CODE, not the symbol — see the note above. */
+        function currencyLabel() {
+            const c = getCurrency();
+            return c.code;
+        }
+
+        function buildCurrencyOptions() {
+            const sel = document.getElementById('currency');
+            if (!sel) return;
+            const keep = sel.value;
+            sel.innerHTML = '';
+            CURRENCIES.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.code;
+                o.textContent = `${c.code} \u2014 ${LANG === 'ar' ? c.ar : c.en} (${c.symbol})`;
+                sel.appendChild(o);
+            });
+            sel.value = keep || 'IQD';
+        }
+
+        function onCurrencyChange() {
+            try { localStorage.setItem('trm_currency', getCurrency().code); } catch (e) { /* private mode */ }
+            updateCostHeaders();
+        }
+
+        /* The two cost columns carry the currency in their heading rather
+           than repeating it in every cell — 40 rows of "IQD" is noise,
+           and the column header is where a reader looks for the unit. */
+        function updateCostHeaders() {
+            const code = currencyLabel();
+            const uc = document.querySelector('[data-i18n="colUnitCost"]');
+            const tc = document.querySelector('[data-i18n="colTotal"]');
+            /* En dash rather than parentheses, matching the exports:
+               brackets are mirrored characters under bidi and read
+               backwards inside an Arabic heading. */
+            if (uc) uc.textContent = `${_t('colUnitCost')} \u2013 ${code}`;
+            if (tc) tc.textContent = `${_t('colTotal')} \u2013 ${code}`;
+        }
+
+
+        /* ── Notifications ───────────────────────────────────────────
+           notify() replaces alert() everywhere. alert() cannot be
+           translated beyond its message, blocks the page, and on Android
+           renders its OK button LTR regardless of the page direction —
+           so an Arabic user got a mirrored dialog for every save.
+
+           confirmDialog() returns a Promise so a destructive action can
+           `await` it and read like a sequence rather than a callback. */
+        function notify(message, type) {
+            const host = document.getElementById('toastStack');
+            if (!host) { console.log(message); return; }
+            const el = document.createElement('div');
+            el.className = 'toast' + (type ? ' ' + type : '');
+            el.textContent = message;
+            host.appendChild(el);
+            /* Errors linger: they usually need reading twice, and the
+               user may have looked away by the time one appears. */
+            const life = type === 'error' ? 6000 : 3200;
+            setTimeout(() => {
+                el.classList.add('leaving');
+                setTimeout(() => el.remove(), 200);
+            }, life);
+        }
+
+        function confirmDialog(opts) {
+            opts = opts || {};
+            return new Promise(resolve => {
+                const back = document.createElement('div');
+                back.className = 'modal-backdrop';
+
+                const card = document.createElement('div');
+                card.className = 'modal-card';
+                card.setAttribute('role', 'alertdialog');
+                card.setAttribute('aria-modal', 'true');
+
+                const h = document.createElement('h3');
+                h.textContent = opts.title || '';
+                const p = document.createElement('p');
+                p.textContent = opts.message || '';
+
+                const actions = document.createElement('div');
+                actions.className = 'modal-actions';
+
+                const cancel = document.createElement('button');
+                cancel.className = 'btn';
+                cancel.textContent = opts.cancelText || _t('dlgCancel');
+
+                const ok = document.createElement('button');
+                ok.className = 'btn' + (opts.danger ? ' btn-danger' : '');
+                ok.textContent = opts.confirmText || _t('dlgConfirm');
+
+                /* Cancel first in the DOM so it is the default focus and
+                   the first tab stop: for a destructive dialog the safe
+                   option should be the one a hurried Enter press hits. */
+                actions.append(cancel, ok);
+                card.append(h, p, actions);
+                back.appendChild(card);
+                document.body.appendChild(back);
+                cancel.focus();
+
+                const close = (val) => {
+                    document.removeEventListener('keydown', onKey);
+                    back.remove();
+                    resolve(val);
+                };
+                const onKey = (e) => {
+                    if (e.key === 'Escape') close(false);
+                };
+                document.addEventListener('keydown', onKey);
+                back.addEventListener('click', (e) => { if (e.target === back) close(false); });
+                cancel.addEventListener('click', () => close(false));
+                ok.addEventListener('click', () => close(true));
             });
         }
 
-        function renderCurrentState() {
-            const state = navHistory[navIndex];
-            const navBar = document.getElementById('navBar');
+        /* ── Clear all rows ──────────────────────────────────────────
+           Empties the sheet back to one blank row rather than removing
+           every row, so the user is never left with a table that has no
+           way to start typing in it.
 
-            hideAllViews();
+           Header fields are deliberately NOT cleared: the organisation,
+           workshop and currency are the document's identity, and the
+           common reason to clear rows is to re-enter items for the SAME
+           document. Wiping them would make this button useful once and
+           annoying every other time. */
+        async function clearAllRows() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            /* A "blank" row is not one with empty fields. addRow() seeds
+               quantity with 1 and both cost fields with 0, so a naive
+               emptiness test counts a brand-new sheet as full and puts a
+               confirmation dialog in front of a no-op.
 
-            if (state === 'main') {
-                document.getElementById('mainPage').style.display = 'block';
-                navBar.classList.remove('active');
-                document.getElementById('navTitle').textContent = '';
-            } else {
-                const viewId = state + 'View';
-                const frameId = state + 'Frame';
-                const loadingId = state + 'Loading';
+               Quantity is excluded entirely: it ALWAYS holds a value, so
+               it can never distinguish a used row from a fresh one. What
+               marks a row as used is a name, a unit, a specification, a
+               non-zero cost, or an attached image — the things a user has
+               to actually type or choose. */
+            const rowIsFilled = (tr) => {
+                const txt = ['.item-name', '.unit', '.specification']
+                    .some(sel => String((tr.querySelector(sel) || {}).value || '').trim() !== '');
+                if (txt) return true;
 
-                const toolView = document.getElementById(viewId);
-                const iframe = document.getElementById(frameId);
-                const loading = document.getElementById(loadingId);
+                const cost = ['.unit-cost', '.total-cost']
+                    .some(sel => Number((tr.querySelector(sel) || {}).value || 0) !== 0);
+                if (cost) return true;
 
-                toolView.classList.add('active');
-                navBar.classList.add('active');
-                document.getElementById('navTitle').textContent = toolTitle(state);
-
-                if (!iframe.src) {
-                    loading.classList.add('active');
-                    iframe.src = tools[state];
-                    iframe.onload = function () {
-                        loading.classList.remove('active');
-                    };
-                } else {
-                    loading.classList.remove('active');
-                }
-            }
-
-            document.getElementById('backBtn').disabled = navIndex === 0;
-            document.getElementById('forwardBtn').disabled = navIndex === navHistory.length - 1;
-
-            applyBarState();
-        }
-
-        function openTool(toolName) {
-            // If we're navigating to a tool we're not already on, push a new history entry
-            if (navHistory[navIndex] !== toolName) {
-                navHistory = navHistory.slice(0, navIndex + 1);
-                navHistory.push(toolName);
-                navIndex = navHistory.length - 1;
-            }
-            renderCurrentState();
-        }
-
-        function backToMain() {
-            if (navHistory[navIndex] !== 'main') {
-                navHistory = navHistory.slice(0, navIndex + 1);
-                navHistory.push('main');
-                navIndex = navHistory.length - 1;
-            }
-            renderCurrentState();
-        }
-
-        function goBack() {
-            if (navIndex > 0) {
-                navIndex--;
-                renderCurrentState();
-            }
-        }
-
-        function goForward() {
-            if (navIndex < navHistory.length - 1) {
-                navIndex++;
-                renderCurrentState();
-            }
-        }
-
-        /* ---------- Floating bar: hide / show / dim ---------- */
-        let barHidden = false;
-        try { barHidden = localStorage.getItem('tvet_bar_hidden') === '1'; } catch (e) {}
-
-        let dimTimer = null;
-
-        function applyBarState() {
-            const onTool = navHistory[navIndex] !== 'main';
-            const navBar = document.getElementById('navBar');
-            const handle = document.getElementById('navHandle');
-            const hotspot = document.getElementById('navHotspot');
-
-            navBar.classList.toggle('collapsed', barHidden);
-            document.getElementById('langSwitch').classList.toggle('collapsed', onTool && barHidden);
-            handle.classList.toggle('active', onTool && barHidden);
-            hotspot.classList.toggle('active', onTool && barHidden);
-            scheduleDim();
-        }
-
-        function setBarHidden(hidden) {
-            barHidden = hidden;
-            try { localStorage.setItem('tvet_bar_hidden', hidden ? '1' : '0'); } catch (e) {}
-            applyBarState();
-        }
-
-        function scheduleDim() {
-            const navBar = document.getElementById('navBar');
-            const langSwitch = document.getElementById('langSwitch');
-            navBar.classList.remove('dimmed');
-            langSwitch.classList.remove('dimmed');
-            clearTimeout(dimTimer);
-            if (!barHidden && navHistory[navIndex] !== 'main') {
-                dimTimer = setTimeout(function () {
-                    navBar.classList.add('dimmed');
-                    langSwitch.classList.add('dimmed');
-                }, 5000);
-            }
-        }
-
-        document.getElementById('navBar').addEventListener('mouseenter', scheduleDim);
-        document.getElementById('langSwitch').addEventListener('mouseenter', scheduleDim);
-        document.getElementById('navHotspot').addEventListener('mouseenter', function () {
-            setBarHidden(false);
-        });
-
-        /* ---------- Full screen ---------- */
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(function () {});
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        document.addEventListener('fullscreenchange', function () {
-            document.getElementById('fullscreenBtn').textContent =
-                document.fullscreenElement ? '⤡' : '⛶';
-        });
-
-        /* ---------- Open in a new tab ---------- */
-        function openInNewTab(toolName) {
-            const url = tools[toolName];
-            if (url) { window.open(url, '_blank', 'noopener'); }
-        }
-
-        function openCurrentInNewTab() {
-            const state = navHistory[navIndex];
-            if (state !== 'main') { openInNewTab(state); }
-        }
-
-        // Add a small ↗ button to every tool card on the landing page
-        document.querySelectorAll('.tool-card').forEach(function (card) {
-            const match = /openTool\('([^']+)'\)/.exec(card.getAttribute('onclick') || '');
-            if (!match) { return; }
-            const btn = document.createElement('button');
-            btn.className = 'card-newtab';
-            btn.textContent = '↗';
-            btn.dataset.tool = match[1];
-            btn.onclick = function (e) {
-                e.stopPropagation();
-                openInNewTab(match[1]);
+                const id = tr.id.split('-')[1];
+                const prev = document.getElementById('imagePreview-' + id);
+                return !!(prev && prev.dataset && prev.dataset.image);
             };
-            card.appendChild(btn);
-        });
 
-        // Keyboard shortcuts - ESC back to the tool list, F for full screen
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && !document.fullscreenElement && navHistory[navIndex] !== 'main') {
-                backToMain();
+            const filled = [...rows].filter(rowIsFilled).length;
+
+            if (!filled) {
+                notify(_t('msgNothingToClear'), 'warn');
+                return;
             }
-            if ((event.key === 'f' || event.key === 'F') && navHistory[navIndex] !== 'main'
-                && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                toggleFullscreen();
-            }
-            if ((event.key === 'h' || event.key === 'H') && navHistory[navIndex] !== 'main'
-                && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                setBarHidden(!barHidden);
-            }
-            if ((event.key === 'l' || event.key === 'L')
-                && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                toggleLanguage();
-            }
-        });
 
-        // Prevent accidental navigation away
-        window.addEventListener('beforeunload', function(e) {
-            if (navHistory[navIndex] !== 'main') {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        });
-
-        /* =====================================================================
-           LANGUAGE ENGINE
-           applyLanguage() repaints every piece of shell text and flips the page
-           direction. It is safe to call at any time, in any view.
-           ===================================================================== */
-        function applyLanguage() {
-            const L = I18N[currentLang];
-
-            document.documentElement.lang = currentLang;
-            document.documentElement.dir = L.dir;
-            document.title = L.docTitle;
-
-            document.getElementById('pageTitle').textContent = L.pageTitle;
-            document.getElementById('pageSubtitle').textContent = L.pageSubtitle;
-            document.getElementById('copyrightText').textContent = L.copyright;
-            document.getElementById('versionText').textContent = L.version;
-
-            // Tool cards: title, description and button
-            document.querySelectorAll('.tool-card').forEach(function (card) {
-                const match = /openTool\('([^']+)'\)/.exec(card.getAttribute('onclick') || '');
-                if (!match) { return; }
-                const entry = L.tools[match[1]];
-                if (!entry) { return; }
-                const titleEl = card.querySelector('.tool-title');
-                const descEl = card.querySelector('.tool-description');
-                const btnEl = card.querySelector('.tool-button');
-                if (titleEl) { titleEl.textContent = entry.title; }
-                if (descEl) { descEl.textContent = entry.desc; }
-                if (btnEl) { btnEl.textContent = L.openTool; }
+            const ok = await confirmDialog({
+                title: _t('dlgClearTitle'),
+                message: _tf('dlgClearBody', filled),
+                confirmText: _t('dlgClearConfirm'),
+                danger: true,
             });
+            if (!ok) return;
 
-            // "Open in a new tab" badges on the cards
-            document.querySelectorAll('.card-newtab').forEach(function (btn) {
-                const name = btn.dataset.tool;
-                const entry = L.tools[name];
-                btn.title = L.cardNewTab;
-                btn.setAttribute('aria-label',
-                    L.cardNewTabAria.replace('{tool}', entry ? entry.title : ''));
-            });
-
-            // Loading messages
-            allToolNames.forEach(function (name) {
-                const el = document.getElementById(name + 'LoadingText');
-                if (el) { el.textContent = L.loading.replace('{tool}', toolTitle(name)); }
-            });
-
-            // Floating navigation bar
-            document.getElementById('backLabel').textContent = L.back;
-            document.getElementById('forwardLabel').textContent = L.forward;
-            document.getElementById('backBtn').title = L.back;
-            document.getElementById('forwardBtn').title = L.forward;
-            document.getElementById('homeBtn').title = L.homeTitle;
-            document.getElementById('fullscreenBtn').title = L.fullscreenTitle;
-            document.getElementById('newTabBtn').title = L.newTabTitle;
-            document.getElementById('hideBarBtn').title = L.hideBarTitle;
-            document.getElementById('navHandle').title = L.showBarTitle;
-            document.getElementById('navTitle').textContent =
-                navHistory[navIndex] === 'main' ? '' : toolTitle(navHistory[navIndex]);
-
-            // The switch itself always offers the *other* language
-            document.getElementById('langSwitchLabel').textContent = L.langSwitchLabel;
-            document.getElementById('langSwitch').title = L.langSwitchTitle;
+            document.getElementById('tableBody').innerHTML = '';
+            rowCounter = 0;
+            addRow();
+            calculateGrandTotal();
+            notify(_t('msgCleared'), 'success');
         }
 
-        function setLanguage(lang) {
-            if (lang !== 'ar' && lang !== 'en') { return; }
-            currentLang = lang;
-            try { localStorage.setItem('tvet_lang', lang); } catch (e) {}
-            applyLanguage();
-            scheduleDim();
+        let rowCounter = 0;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            let saved = 'en';
+            try { saved = localStorage.getItem('trm_lang') || 'en'; } catch (e) { /* private mode */ }
+            let cur = 'IQD';
+            try { cur = localStorage.getItem('trm_currency') || 'IQD'; } catch (e) { /* private mode */ }
+            buildCurrencyOptions();
+            document.getElementById('currency').value = cur;
+            setLang(saved);
+            addRow();
+            document.getElementById('prepDate').valueAsDate = new Date();
+        });
+
+        function addRow() {
+            rowCounter++;
+            const tbody = document.getElementById('tableBody');
+            const row = tbody.insertRow();
+            row.id = `row-${rowCounter}`;
+            
+            row.innerHTML = `
+                <td><input type="text" class="item-name" placeholder="${_t('phItem')}"></td>
+                <td><input type="number" class="quantity" min="0" value="1" onchange="calculateRow(this)"></td>
+                <td><input type="text" class="unit" placeholder="${_t('phUnit')}"></td>
+                <td><textarea class="specification" placeholder="${_t('phSpec')}"></textarea></td>
+                <td><input type="number" class="unit-cost" min="0" step="0.01" value="0" onchange="calculateRow(this)"></td>
+                <td><input type="number" class="total-cost" readonly value="0"></td>
+                <td class="image-cell">
+                    <div class="image-placeholder" id="placeholder-${rowCounter}">${_t('noImage')}</div>
+                    <button class="btn-add-image" onclick="selectImage(${rowCounter})">📷 ${_t('btnAddImage')}</button>
+                    <input type="file" id="imageInput-${rowCounter}" class="hidden" accept="image/*" onchange="handleImageUpload(event, ${rowCounter})">
+                    <div id="imagePreview-${rowCounter}" class="hidden"></div>
+                    <button id="removeBtn-${rowCounter}" class="btn-remove-image hidden" onclick="removeImage(${rowCounter})">🗑️</button>
+                </td>
+                <td><button class="btn-delete-row" onclick="deleteRow(this)">🗑️</button></td>
+            `;
         }
 
-        function toggleLanguage() {
-            setLanguage(currentLang === 'en' ? 'ar' : 'en');
+        function calculateRow(element) {
+            const row = element.closest('tr');
+            const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+            const unitCost = parseFloat(row.querySelector('.unit-cost').value) || 0;
+            const total = quantity * unitCost;
+            row.querySelector('.total-cost').value = total.toFixed(2);
+            calculateGrandTotal();
         }
 
-        // First paint
-        applyLanguage();
-        renderCurrentState();
-    </script>
+        function calculateGrandTotal() {
+            const totals = document.querySelectorAll('.total-cost');
+            let grandTotal = 0;
+            totals.forEach(input => {
+                grandTotal += parseFloat(input.value) || 0;
+            });
+            document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
+        }
+
+        function deleteRow(button) {
+            confirmDialog({
+                title: _t('dlgDeleteRowTitle'),
+                message: _t('dlgDeleteRowBody'),
+                confirmText: _t('dlgDeleteConfirm'),
+                danger: true,
+            }).then(ok => {
+                if (!ok) return;
+                button.closest('tr').remove();
+                calculateGrandTotal();
+                notify(_t('msgRowDeleted'), 'success');
+            });
+        }
+
+        function selectImage(rowId) {
+            document.getElementById(`imageInput-${rowId}`).click();
+        }
+
+        function handleImageUpload(event, rowId) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    displayImage(rowId, base64);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function displayImage(rowId, base64) {
+            const placeholder = document.getElementById(`placeholder-${rowId}`);
+            const previewDiv = document.getElementById(`imagePreview-${rowId}`);
+            const removeBtn = document.getElementById(`removeBtn-${rowId}`);
+            const addBtn = placeholder.nextElementSibling;
+
+            placeholder.classList.add('hidden');
+            addBtn.classList.add('hidden');
+            previewDiv.classList.remove('hidden');
+            removeBtn.classList.remove('hidden');
+
+            previewDiv.className = 'image-preview';
+            previewDiv.innerHTML = `<img src="${base64}" alt="Resource image">`;
+            previewDiv.dataset.image = base64;
+        }
+
+        function removeImage(rowId) {
+            const placeholder = document.getElementById(`placeholder-${rowId}`);
+            const previewDiv = document.getElementById(`imagePreview-${rowId}`);
+            const removeBtn = document.getElementById(`removeBtn-${rowId}`);
+            const addBtn = placeholder.nextElementSibling;
+            const fileInput = document.getElementById(`imageInput-${rowId}`);
+
+            placeholder.classList.remove('hidden');
+            addBtn.classList.remove('hidden');
+            previewDiv.classList.add('hidden');
+            removeBtn.classList.add('hidden');
+
+            previewDiv.innerHTML = '';
+            delete previewDiv.dataset.image;
+            fileInput.value = '';
+        }
+
+        function saveToJSON() {
+            const data = {
+                version: "1.0",
+                timestamp: new Date().toISOString(),
+                header: {
+                    orgName: document.getElementById('orgName').value,
+                    trainingTitle: document.getElementById('trainingTitle').value,
+                    preparedBy: document.getElementById('preparedBy').value,
+                    prepDate: document.getElementById('prepDate').value
+                },
+                rows: []
+            };
+
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach(row => {
+                const rowId = row.id.split('-')[1];
+                const previewDiv = document.getElementById(`imagePreview-${rowId}`);
+                
+                data.rows.push({
+                    itemName: row.querySelector('.item-name').value,
+                    quantity: row.querySelector('.quantity').value,
+                    unit: row.querySelector('.unit').value,
+                    specification: row.querySelector('.specification').value,
+                    unitCost: row.querySelector('.unit-cost').value,
+                    totalCost: row.querySelector('.total-cost').value,
+                    image: previewDiv.dataset.image || null
+                });
+            });
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `training_resources_${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadFromJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    document.getElementById('orgName').value = data.header.orgName || '';
+                    document.getElementById('trainingTitle').value = data.header.trainingTitle || '';
+                    document.getElementById('preparedBy').value = data.header.preparedBy || '';
+                    document.getElementById('prepDate').value = data.header.prepDate || '';
+
+                    document.getElementById('tableBody').innerHTML = '';
+                    rowCounter = 0;
+
+                    data.rows.forEach(rowData => {
+                        addRow();
+                        const row = document.querySelector('#tableBody tr:last-child');
+                        
+                        row.querySelector('.item-name').value = rowData.itemName || '';
+                        row.querySelector('.quantity').value = rowData.quantity || 1;
+                        row.querySelector('.unit').value = rowData.unit || '';
+                        row.querySelector('.specification').value = rowData.specification || '';
+                        row.querySelector('.unit-cost').value = rowData.unitCost || 0;
+                        row.querySelector('.total-cost').value = rowData.totalCost || 0;
+
+                        if (rowData.image) {
+                            displayImage(rowCounter, rowData.image);
+                        }
+                    });
+
+                    calculateGrandTotal();
+                    notify(_t('msgLoadOk'), 'success');
+                } catch (err) {
+                    notify(_t('msgLoadError') + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+</script>
+<!-- ===== ExcelJS Library ===== -->
+<script src="./exceljs.min.js"></script>
+
+<!-- Word export lives in its own file: it is the largest single piece
+     of logic in the tool and the one most likely to change. -->
+<script src="./exports_docx.js"></script>
+
+<!-- ===== Application JavaScript ===== -->
+<script>
+
+/* ===== Status Message ===== */
+function showStatus(message, duration = 2500) {
+  const el = document.getElementById('statusMessage');
+  if (!el) return;
+
+  el.textContent = message;
+  el.style.display = 'block';
+
+  setTimeout(() => {
+    el.style.display = 'none';
+  }, duration);
+}
+
+/* ===== XLSX Export (Final – Clean & Structured) ===== */
+async function exportToExcelXLSX() {
+  try {
+    if (typeof ExcelJS === 'undefined') {
+      notify(_t('msgExcelLoading'), 'error');
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(_t('xlSheet'));
+
+    /* Arial, not Cairo, and deliberately so. A workbook cannot EMBED a
+       font — it only names one, and the reader's machine has to have it.
+       Cairo is a web font shipped with this tool; Arial ships with Excel
+       everywhere and carries full Arabic coverage. Naming Cairo would
+       give a correct file that renders in whatever Excel substitutes,
+       which on a bare Windows install is a fallback with no Arabic.
+       The UI uses Cairo because there the file is guaranteed present. */
+    const XL_FONT = _isRTL() ? 'Arial' : 'Calibri';
+    const _f = (extra) => Object.assign({ name: XL_FONT }, extra || {});
+
+    /* ===== Read Header Inputs ===== */
+const orgName =
+  document.getElementById('organizationName')?.value ||
+  document.getElementById('organization')?.value ||
+  document.getElementById('orgName')?.value ||
+  '';
+    const trainingTitle =
+      document.getElementById('trainingTitle')?.value || '';
+    const preparedBy =
+      document.getElementById('preparedBy')?.value || '';
+    const trainingDate =
+      document.getElementById('trainingDate')?.value ||
+      new Date().toLocaleDateString('en-US');
+
+    /* ===== Header Section (Fixed Top) ===== */
+    worksheet.addRow([_t('xlHeading')]);
+    worksheet.addRow([`${_t('xlOrg')}: ${orgName}`]);
+    worksheet.addRow([`${_t('xlTitle')}: ${trainingTitle}`]);
+    worksheet.addRow([`${_t('xlBy')}: ${preparedBy}`]);
+    worksheet.addRow([`${_t('xlDate')}: ${trainingDate}`]);
+    worksheet.addRow([]); // spacer
+
+    // Styling header
+    worksheet.mergeCells('A1:G1');
+    worksheet.getRow(1).font = _f({ bold: true, size: 14 });
+    worksheet.getRow(1).alignment = { horizontal: 'center' };
+
+    /* `readingOrder` is per-CELL and separate from the sheet-level
+       rightToLeft below: the sheet setting flips which edge column A
+       sits on, the cell setting decides where the text inside a cell
+       starts. Set only one and a label like "الجهة: Ministry" ends up
+       with its colon on the wrong side. */
+    for (let r = 2; r <= 5; r++) {
+      worksheet.mergeCells(`A${r}:G${r}`);
+      worksheet.getRow(r).font = _f({ bold: true });
+      worksheet.getRow(r).alignment = {
+        horizontal: _isRTL() ? 'right' : 'left',
+        readingOrder: _isRTL() ? 'rtl' : 'ltr',
+      };
+    }
+
+    /* ===== Table Header Row ===== */
+    const headerRowIndex = worksheet.rowCount + 1;
+
+    worksheet.addRow([
+      _t('colItem'),
+      _t('colQty'),
+      _t('colUnit'),
+      _t('colSpec'),
+      _t('colUnitCost') + (currencyLabel() ? ' \u2013 ' + currencyLabel() : ''),
+      _t('colTotal') + (currencyLabel() ? ' \u2013 ' + currencyLabel() : ''),
+      _t('colImage')
+    ]);
+
+    worksheet.getRow(headerRowIndex).font = _f({ bold: true });
+    worksheet.getRow(headerRowIndex).alignment = {
+      horizontal: 'center',
+      readingOrder: _isRTL() ? 'rtl' : 'ltr',
+    };
+
+    // Column widths
+    worksheet.columns = [
+      { width: 25 },
+      { width: 10 },
+      { width: 10 },
+      { width: 30 },
+      { width: 15 },
+      { width: 15 },
+      { width: 20 }
+    ];
+
+    /* Sheet-level mirroring: column A moves to the right edge and the
+       whole grid reads right-to-left, which is what an Arabic reader
+       expects from a workbook rather than a left-anchored grid holding
+       Arabic text. */
+    worksheet.views = [
+      { rightToLeft: _isRTL() }
+    ];
+
+    /* ===== Data Rows ===== */
+    const rows = document.querySelectorAll('#tableBody tr');
+    let grandTotal = 0;
+
+    rows.forEach(row => {
+      const rowId = row.id.split('-')[1];
+      const previewDiv =
+        document.getElementById(`imagePreview-${rowId}`);
+      const rawImage = previewDiv?.dataset?.image || null;
+
+      const total =
+        Number(row.querySelector('.total-cost')?.value || 0);
+      grandTotal += total;
+
+      const excelRow = worksheet.addRow([
+        row.querySelector('.item-name')?.value || '',
+        Number(row.querySelector('.quantity')?.value || 0),
+        row.querySelector('.unit')?.value || '',
+        row.querySelector('.specification')?.value || '',
+        Number(row.querySelector('.unit-cost')?.value || 0),
+        total,
+        '' // image placeholder
+      ]);
+
+      excelRow.height = 80;
+      excelRow.font = _f();
+      /* Text columns follow the language; the three numeric columns stay
+         LTR whatever the language, because a quantity or a price with
+         its decimal separator mirrored is a different number to the eye. */
+      [1, 3, 4].forEach(c => {
+        excelRow.getCell(c).alignment = {
+          vertical: 'middle',
+          horizontal: _isRTL() ? 'right' : 'left',
+          wrapText: true,
+          readingOrder: _isRTL() ? 'rtl' : 'ltr',
+        };
+      });
+      [2, 5, 6].forEach(c => {
+        excelRow.getCell(c).alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          readingOrder: 'ltr',
+        };
+      });
+      excelRow.getCell(5).numFmt = '#,##0.00';
+      excelRow.getCell(6).numFmt = '#,##0.00';
+
+      /* ===== Image Placement (Stable) ===== */
+      if (rawImage && typeof rawImage === 'string') {
+        let base64 = rawImage;
+        let ext = 'png';
+
+        const match = rawImage.match(
+          /^data:image\/(png|jpeg|jpg|webp);base64,(.*)$/i
+        );
+        if (match) {
+          ext = match[1] === 'jpg' ? 'jpeg' : match[1];
+          base64 = match[2];
+        }
+
+        if (base64.length > 50) {
+          const imageId = workbook.addImage({
+            base64,
+            extension: ext
+          });
+
+          worksheet.addImage(imageId, {
+            tl: { col: 6, row: excelRow.number - 1 },
+            ext: { width: 90, height: 90 }
+          });
+        }
+      }
+    });
+
+    /* ===== Grand Total (Bottom) ===== */
+    worksheet.addRow([]);
+    const totalRow = worksheet.addRow([
+      '', '', '', '', _t('grandTotal') + (currencyLabel() ? ' \u2013 ' + currencyLabel() : ''), grandTotal
+    ]);
+
+    worksheet.mergeCells(
+      `A${totalRow.number}:E${totalRow.number}`
+    );
+    totalRow.font = _f({ bold: true });
+    totalRow.getCell(1).alignment = {
+      horizontal: _isRTL() ? 'right' : 'left',
+      readingOrder: _isRTL() ? 'rtl' : 'ltr',
+    };
+    totalRow.getCell(6).numFmt = '#,##0.00';
+    totalRow.getCell(6).alignment = { horizontal: 'center', readingOrder: 'ltr' };
+
+    /* ===== Export File ===== */
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob(
+      [buffer],
+      {
+        type:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    );
+
+    /* /[^a-z0-9]/gi turns an Arabic title into a row of underscores, so
+       every Arabic export arrived named "______". Keep Unicode letters
+       and digits and strip only what a filesystem actually objects to. */
+    const fileName =
+      String(trainingTitle || '')
+        .replace(/[\\/:*?"<>|\u0000-\u001F]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 80) ||
+      _t('xlFallbackName');
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    notify(_t('msgExcelOk'), 'success');
+  } catch (error) {
+    console.error('XLSX Export Error:', error);
+    notify(_t('msgExcelError') + error.message, 'error');
+  }
+}
+
+/* ===== ExcelJS Check ===== */
+console.log('ExcelJS loaded:', typeof ExcelJS !== 'undefined');
+
+
+</script>
+<!-- ===== Footer / Copyright & Disclaimer ===== -->
+<footer class="app-footer">
+  <div class="footer-content">
+    <div class="copyright" data-i18n="ftCopyright">
+      © 2026 Training Resource Management Tool | by Husham Jawad Kadhim | Version 2026 | All Rights Reserved
+    </div>
+
+    <details class="disclaimer-box">
+      <summary data-i18n="ftDisclaimerLabel">Disclaimer</summary>
+      <div class="disclaimer" data-i18n="ftDisclaimerBody">
+        Training Resource Management Tool is provided "as is" without warranty of any kind. The developer assumes no responsibility for any inaccuracies, errors, omissions, or inconsistencies in the generated documents. Users and facilitating institutions are solely responsible for verifying, validating, and making final decisions on all content before use.
+      </div>
+    </details>
+  </div>
+</footer>
+
+
 </body>
 </html>
